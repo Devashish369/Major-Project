@@ -15,9 +15,16 @@ const apiClient = axios.create({
 });
 
 // ── Request interceptor ────────────────────────────────────────────────────
-// M1 will add: attach Authorization: Bearer <token> here.
+// Attach the JWT from localStorage on every request.
+// The token is stored by AuthContext after login/register.
 apiClient.interceptors.request.use(
-  (config) => config,
+  (config) => {
+    const token = localStorage.getItem('intellipm_token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
+    }
+    return config;
+  },
   (error) => Promise.reject(error),
 );
 

@@ -5,17 +5,17 @@
 
 ## Current status
 
-- **Current module:** M0 ☑ DONE – next is M1 (Auth)
-- **Last session:** 2026-10-05 / Antigravity AI / M0 repo skeleton built end-to-end
-- **Known bugs:** none
-- **Next step:** M1 – Auth (register/login/me, JWT, password hashing, frontend login/register + protected routes)
+- **Current module:** M1 ☑ DONE – next is M2 (Projects + Members)
+- **Last session:** 2026-10-05 / Antigravity AI / M1 Auth complete
+- **Known bugs:** JWT warning in tests (test SECRET_KEY is 23 bytes; real .env key is fine)
+- **Next step:** M2 – Projects + members + user skills + capacity
 
 ## Module checklist
 
 | Module | Description | Priority | Status | Target date |
 |---|---|---|---|---|
 | M0 | Repo, backend skeleton, frontend shell | MUST | ☑ | Oct 5 |
-| M1 | Auth | MUST | ☐ | Oct 6 |
+| M1 | Auth | MUST | ☑ | Oct 6 |
 | M2 | Projects, members, skills, capacity | MUST | ☐ | Oct 6 |
 | M3 | Tasks, Kanban, dependencies, activity log | MUST | ☐ | Oct 7 |
 | M4 | AI planner (LLM + fallback) | MUST | ☐ | Oct 8 |
@@ -46,6 +46,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | Date | Account | Module | What was done | Bugs / notes |
 |---|---|---|---|---|
 | 2026-10-05 | Antigravity AI | M0 | Folder structure, backend venv + requirements.txt, config.py (pydantic-settings), database.py (SQLAlchemy 2.0 sync engine), main.py (CORS, response envelope ok()/err(), global error handler, GET /api/v1/health), .gitignore, .env.example, models.py placeholder, ai/fallback_plan.json; Vite+React+Tailwind v4 frontend with react-query, axios, react-router-dom, lucide-react; HealthPage.jsx calls /health and shows live JSON response | Tailwind v4 default @theme imported Inter from Google Fonts causing PostCSS ordering error → fixed by using tailwindcss/preflight + tailwindcss/utilities separately and loading Inter via HTML link tag |
+| 2026-10-05 | Antigravity AI | M1 | models.py (User, SQLAlchemy 2.0), schemas.py (Pydantic v2 UserCreate/Login/Update/Out, TokenOut), security.py (bcrypt hash/verify, PyJWT create/decode), deps.py (get_current_user), routers/auth.py (register/login/me/patch-me), main.py updated to lifespan pattern + auth router; frontend: AuthContext (localStorage + /me validation on mount), ProtectedRoute, LoginPage, RegisterPage, DashboardPage placeholder; 18/18 pytest tests pass | Added email-validator dep for Pydantic EmailStr; replaced deprecated on_event with lifespan context manager |
 
 ## Human checklist (do these yourself, not the AI)
 

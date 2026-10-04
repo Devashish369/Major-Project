@@ -1,25 +1,29 @@
 /**
- * App.jsx – Root component for IntelliPM.
+ * App.jsx – Root component and router for IntelliPM.
  *
- * M0: Sets up:
- *   - QueryClientProvider from @tanstack/react-query (global data-fetching cache)
- *   - BrowserRouter + Routes from react-router-dom
- *   - A single route: "/" → HealthPage (M0 done-when test)
+ * M1 adds:
+ *   - AuthProvider wrapping the whole app
+ *   - /login  → LoginPage      (public)
+ *   - /register → RegisterPage (public)
+ *   - /dashboard → DashboardPage (PROTECTED)
+ *   - / redirects to /dashboard (ProtectedRoute handles unauthenticated → /login)
  *
- * In later modules (M1+), protected routes and more pages are added here.
+ * Future modules add more routes inside the ProtectedRoute wrapper.
  */
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import HealthPage from './pages/HealthPage';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
-// Create a single QueryClient that caches all server state.
-// staleTime: 60s before a query is considered stale and re-fetched.
+import { AuthProvider } from './context/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
+import HealthPage from './pages/HealthPage';
+import LoginPage from './pages/LoginPage';
+import RegisterPage from './pages/RegisterPage';
+import DashboardPage from './pages/DashboardPage';
+
 const queryClient = new QueryClient({
   defaultOptions: {
-    queries: {
-      staleTime: 60_000,
-      retry: 1,
-    },
+    queries: { staleTime: 60_000, retry: 1 },
   },
 });
 
@@ -27,12 +31,34 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          {/* M0: Health check page */}
-          <Route path="/" element={<HealthPage />} />
+        {/* AuthProvider must wrap everything that needs auth state */}
+        <AuthProvider>
+          <Routes>
+            {/* ── Public routes ───────────────────────────── */}
+            <Route path="/login"    element={<LoginPage />} />
+            <Route path="/register" element={<RegisterPage />} />
+            <Route path="/health"   element={<HealthPage />} />
 
-          {/* M1+: Login, Register, Dashboard, Project pages will be added here */}
-        </Routes>
+            {/* ── Protected routes ────────────────────────── */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* M2+: Project, Board, Team, Analytics pages go here */}
+
+            {/* ── Default redirect ─────────────────────────── */}
+            {/* / → /dashboard; ProtectedRoute will send unauthenticated to /login */}
+            <Route path="/" element={<Navigate to="/dashboard" replace />} />
+
+            {/* 404 fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
   );
