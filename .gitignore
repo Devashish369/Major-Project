@@ -1,0 +1,25 @@
+# Secrets – never commit
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+
+# Node
+node_modules/
+dist/
+
+# Database files
+*.db
+
+# Datasets (large, gitignored per spec)
+Datasets/
+
+# ML artifacts (trained models)
+backend/app/ml/artifacts/*.joblib
+
+# OS files
+.DS_Store
+Thumbs.db

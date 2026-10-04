@@ -1,0 +1,47 @@
+/* 
+ * index.css – Global styles for IntelliPM
+ *
+ * We use tailwindcss/preflight + tailwindcss/utilities instead of the combined
+ * @import "tailwindcss" because Tailwind v4's default @theme imports Inter from
+ * Google Fonts, which PostCSS then places after our CSS rules causing an error.
+ * Inter font is already loaded via <link> in index.html.
+ */
+
+/* Tailwind CSS v4: base reset and utility classes */
+@import "tailwindcss/preflight" layer(base);
+@import "tailwindcss/utilities" layer(utilities);
+
+/* Override Tailwind's default sans-serif font to use Inter (loaded in index.html) */
+@theme {
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+
+/* ── CSS custom properties (design tokens) ───────────────────────────────── */
+:root {
+  --color-primary:   #6366f1;   /* Indigo – main accent */
+  --color-primary-d: #4f46e5;   /* darker shade for hover */
+  --color-bg:        #0f172a;   /* Slate 900 – app background */
+  --color-surface:   #1e293b;   /* Slate 800 – cards / panels */
+  --color-border:    #334155;   /* Slate 700 – borders */
+  --color-text:      #f1f5f9;   /* Slate 100 – primary text */
+  --color-muted:     #94a3b8;   /* Slate 400 – secondary text */
+}
+
+/* ── Base ─────────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+}

@@ -1,0 +1,113 @@
+{
+  "_comment": "Fallback plan used when LLM is unavailable (USE_CACHED_PLAN_ONLY=true or all providers fail).",
+  "source": "fallback",
+  "project_title": "Sample Web Application",
+  "summary": "A basic CRUD web application with authentication and dashboard (cached fallback plan).",
+  "sprints": [
+    { "name": "Sprint 1 – Foundation", "goal": "Set up the project skeleton and auth" },
+    { "name": "Sprint 2 – Core Features", "goal": "Implement main CRUD operations" },
+    { "name": "Sprint 3 – Polish", "goal": "UI improvements, testing, and deployment prep" }
+  ],
+  "tasks": [
+    {
+      "title": "Project setup and repository initialisation",
+      "description": "Initialise repo, configure linting, CI, and environment variables.",
+      "module": "infrastructure",
+      "priority": "high",
+      "estimate_hours": 4,
+      "required_skills": ["devops"],
+      "sprint_index": 0,
+      "depends_on": []
+    },
+    {
+      "title": "Design database schema",
+      "description": "Define all tables, relationships, and indexes.",
+      "module": "backend",
+      "priority": "high",
+      "estimate_hours": 6,
+      "required_skills": ["backend", "sql"],
+      "sprint_index": 0,
+      "depends_on": ["Project setup and repository initialisation"]
+    },
+    {
+      "title": "User registration and login API",
+      "description": "POST /auth/register and POST /auth/login with JWT.",
+      "module": "backend",
+      "priority": "high",
+      "estimate_hours": 8,
+      "required_skills": ["backend"],
+      "sprint_index": 0,
+      "depends_on": ["Design database schema"]
+    },
+    {
+      "title": "Login and register UI",
+      "description": "React forms with validation and JWT storage in localStorage.",
+      "module": "frontend",
+      "priority": "high",
+      "estimate_hours": 6,
+      "required_skills": ["frontend"],
+      "sprint_index": 0,
+      "depends_on": ["User registration and login API"]
+    },
+    {
+      "title": "CRUD API for main resource",
+      "description": "REST endpoints: GET, POST, PATCH, DELETE with proper auth guards.",
+      "module": "backend",
+      "priority": "medium",
+      "estimate_hours": 10,
+      "required_skills": ["backend"],
+      "sprint_index": 1,
+      "depends_on": ["User registration and login API"]
+    },
+    {
+      "title": "Dashboard page",
+      "description": "List, filter and search main resources with pagination.",
+      "module": "frontend",
+      "priority": "medium",
+      "estimate_hours": 8,
+      "required_skills": ["frontend"],
+      "sprint_index": 1,
+      "depends_on": ["CRUD API for main resource", "Login and register UI"]
+    },
+    {
+      "title": "Detail / edit page",
+      "description": "View and edit a single resource with optimistic updates.",
+      "module": "frontend",
+      "priority": "medium",
+      "estimate_hours": 8,
+      "required_skills": ["frontend"],
+      "sprint_index": 1,
+      "depends_on": ["Dashboard page"]
+    },
+    {
+      "title": "Unit tests – backend",
+      "description": "pytest coverage for auth and CRUD endpoints.",
+      "module": "tests",
+      "priority": "medium",
+      "estimate_hours": 6,
+      "required_skills": ["backend"],
+      "sprint_index": 2,
+      "depends_on": ["CRUD API for main resource"]
+    },
+    {
+      "title": "End-to-end UI polish and accessibility",
+      "description": "Fix UI inconsistencies, add loading states, and improve a11y.",
+      "module": "frontend",
+      "priority": "low",
+      "estimate_hours": 6,
+      "required_skills": ["frontend", "design"],
+      "sprint_index": 2,
+      "depends_on": ["Detail / edit page"]
+    },
+    {
+      "title": "Deployment and README",
+      "description": "Deploy to Render; write README with setup instructions.",
+      "module": "infrastructure",
+      "priority": "low",
+      "estimate_hours": 4,
+      "required_skills": ["devops"],
+      "sprint_index": 2,
+      "depends_on": ["Unit tests – backend"]
+    }
+  ]
+}
