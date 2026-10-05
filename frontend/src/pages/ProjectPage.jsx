@@ -3,7 +3,8 @@
  *
  * M2 added: Overview tab + Team tab.
  * M3 added: Board tab (Kanban drag-and-drop with @dnd-kit).
- * M4+ will add: Plan, Analytics, Graph, Decisions tabs.
+ * M4 added: Plan tab (AI planner + apply-plan).
+ * M5+ will add: Analytics, Graph, Decisions tabs.
  */
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -17,6 +18,7 @@ import { getProject, listMembers, addMember, updateMember, removeMember, deleteP
 import { listTasks } from '../api/tasks';
 import AddMemberModal from '../components/AddMemberModal';
 import KanbanBoard from '../components/KanbanBoard';
+import PlanTab from '../components/PlanTab';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -222,7 +224,7 @@ function OverviewTab({ project }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Overview', 'Board', 'Team'];
+const TABS = ['Overview', 'Board', 'Plan', 'Team'];
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -331,6 +333,9 @@ export default function ProjectPage() {
         {tab === 'Overview' && project && <OverviewTab project={project} />}
         {tab === 'Board' && (
           <KanbanBoard tasks={tasks} projectId={projectId} />
+        )}
+        {tab === 'Plan' && (
+          <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}
         {tab === 'Team' && (
           <TeamTab projectId={projectId} isAdmin={isAdmin} currentUserId={user?.id} />

@@ -1,0 +1,174 @@
+{
+  "project_title": "Hospital Management System",
+  "summary": "A comprehensive hospital management system covering patient registration, appointment scheduling, medical records, billing, pharmacy, lab, ward management, and reporting. Built with a microservice-ready layered architecture.",
+  "sprints": [
+    {
+      "name": "Sprint 1 – Core Infrastructure & Auth",
+      "goal": "Stand up the backend API skeleton, database schema, and user authentication for staff and patients."
+    },
+    {
+      "name": "Sprint 2 – Patient & Appointment Management",
+      "goal": "Enable patient registration, profile management, and doctor appointment booking and scheduling."
+    },
+    {
+      "name": "Sprint 3 – Medical Records & Billing",
+      "goal": "Implement electronic health records (EHR), prescription management, and invoicing/billing."
+    },
+    {
+      "name": "Sprint 4 – Pharmacy, Lab & Reporting",
+      "goal": "Add pharmacy inventory, lab test ordering, result tracking, and admin analytics dashboard."
+    }
+  ],
+  "tasks": [
+    {
+      "title": "Database schema design",
+      "description": "Design and implement the relational schema for patients, staff, appointments, medical records, billing, pharmacy and lab tables using SQLAlchemy 2.0 migrations.",
+      "module": "Infrastructure",
+      "priority": "critical",
+      "estimate_hours": 10,
+      "required_skills": ["postgresql", "sqlalchemy", "system_design"],
+      "sprint_index": 0,
+      "depends_on": []
+    },
+    {
+      "title": "Staff authentication & RBAC",
+      "description": "Implement JWT-based login for doctors, nurses, receptionists and admins. Role-based access control middleware.",
+      "module": "Auth",
+      "priority": "critical",
+      "estimate_hours": 12,
+      "required_skills": ["python", "jwt", "fastapi"],
+      "sprint_index": 0,
+      "depends_on": ["Database schema design"]
+    },
+    {
+      "title": "Patient registration API",
+      "description": "REST endpoints to register, update, search and deactivate patient profiles. Includes duplicate detection by NHI number.",
+      "module": "Patient",
+      "priority": "high",
+      "estimate_hours": 8,
+      "required_skills": ["python", "fastapi", "pydantic"],
+      "sprint_index": 1,
+      "depends_on": ["Staff authentication & RBAC"]
+    },
+    {
+      "title": "Doctor & department management",
+      "description": "CRUD for doctors, departments, specialisations, and working-hour schedules. Supports assigning doctors to wards.",
+      "module": "Staff",
+      "priority": "high",
+      "estimate_hours": 8,
+      "required_skills": ["python", "fastapi"],
+      "sprint_index": 1,
+      "depends_on": ["Staff authentication & RBAC"]
+    },
+    {
+      "title": "Appointment scheduling engine",
+      "description": "Allow patients to book appointments. Conflict detection, waiting-list, cancellation, reminder notifications via email.",
+      "module": "Appointment",
+      "priority": "high",
+      "estimate_hours": 16,
+      "required_skills": ["python", "fastapi", "scheduling"],
+      "sprint_index": 1,
+      "depends_on": ["Patient registration API", "Doctor & department management"]
+    },
+    {
+      "title": "Frontend – patient portal",
+      "description": "React pages for patient self-registration, appointment booking, and viewing upcoming visits.",
+      "module": "Frontend",
+      "priority": "medium",
+      "estimate_hours": 20,
+      "required_skills": ["react", "tailwind"],
+      "sprint_index": 1,
+      "depends_on": ["Patient registration API", "Appointment scheduling engine"]
+    },
+    {
+      "title": "Electronic health records (EHR) API",
+      "description": "Create, read, and update patient visit notes, diagnoses (ICD-10 codes), vital signs, and allergies. Only the attending doctor may write.",
+      "module": "Medical",
+      "priority": "critical",
+      "estimate_hours": 18,
+      "required_skills": ["python", "fastapi", "postgresql"],
+      "sprint_index": 2,
+      "depends_on": ["Patient registration API"]
+    },
+    {
+      "title": "Prescription management",
+      "description": "Doctors prescribe medications; system checks drug interactions, sends to pharmacy queue. Pharmacist confirms dispensed.",
+      "module": "Medical",
+      "priority": "high",
+      "estimate_hours": 14,
+      "required_skills": ["python", "fastapi"],
+      "sprint_index": 2,
+      "depends_on": ["Electronic health records (EHR) API"]
+    },
+    {
+      "title": "Billing & invoice generation",
+      "description": "Auto-generate itemised invoices from visit, procedures, and prescriptions. Support partial payment and insurance claim codes.",
+      "module": "Billing",
+      "priority": "high",
+      "estimate_hours": 16,
+      "required_skills": ["python", "fastapi", "pdf_generation"],
+      "sprint_index": 2,
+      "depends_on": ["Electronic health records (EHR) API"]
+    },
+    {
+      "title": "Frontend – doctor & nurse dashboard",
+      "description": "React dashboard for doctors: today's appointments, patient queue, EHR writing, prescription submission.",
+      "module": "Frontend",
+      "priority": "high",
+      "estimate_hours": 22,
+      "required_skills": ["react", "tailwind"],
+      "sprint_index": 2,
+      "depends_on": ["Electronic health records (EHR) API", "Appointment scheduling engine"]
+    },
+    {
+      "title": "Pharmacy inventory management",
+      "description": "Track drug stock levels, expiry dates, supplier orders, reorder alerts. Integrated with prescription queue.",
+      "module": "Pharmacy",
+      "priority": "medium",
+      "estimate_hours": 14,
+      "required_skills": ["python", "fastapi"],
+      "sprint_index": 3,
+      "depends_on": ["Prescription management"]
+    },
+    {
+      "title": "Lab test ordering & results",
+      "description": "Doctor orders lab tests; lab technician uploads results (PDF or structured). Results linked to patient EHR.",
+      "module": "Lab",
+      "priority": "medium",
+      "estimate_hours": 12,
+      "required_skills": ["python", "fastapi", "file_storage"],
+      "sprint_index": 3,
+      "depends_on": ["Electronic health records (EHR) API"]
+    },
+    {
+      "title": "Ward & bed management",
+      "description": "Track ward occupancy, assign beds to admitted patients, discharge process, and ward transfer logging.",
+      "module": "Ward",
+      "priority": "medium",
+      "estimate_hours": 10,
+      "required_skills": ["python", "fastapi"],
+      "sprint_index": 3,
+      "depends_on": ["Patient registration API"]
+    },
+    {
+      "title": "Admin analytics dashboard",
+      "description": "Charts: daily admissions, revenue trend, bed occupancy rate, appointment no-shows, top diagnoses. Exportable to CSV.",
+      "module": "Analytics",
+      "priority": "medium",
+      "estimate_hours": 16,
+      "required_skills": ["react", "recharts", "python"],
+      "sprint_index": 3,
+      "depends_on": ["Billing & invoice generation", "Lab test ordering & results", "Ward & bed management"]
+    },
+    {
+      "title": "End-to-end testing & deployment",
+      "description": "Write Pytest integration tests for all critical paths. Dockerise backend and frontend. CI pipeline and staging deploy.",
+      "module": "DevOps",
+      "priority": "high",
+      "estimate_hours": 20,
+      "required_skills": ["python", "docker", "github_actions"],
+      "sprint_index": 3,
+      "depends_on": ["Admin analytics dashboard", "Pharmacy inventory management"]
+    }
+  ]
+}

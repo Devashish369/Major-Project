@@ -36,11 +36,12 @@ class Settings(BaseSettings):
     # ── Estimation ────────────────────────────────────────────────────────────
     HOURS_PER_STORY_POINT: int = 3
 
-    # pydantic-settings v2: tell it to read from backend/.env
+    # pydantic-settings v2: look for .env in backend/ (when run from repo root)
+    # OR in ./ (when run from backend/ directory). First match wins.
     model_config = SettingsConfigDict(
-        env_file="backend/.env",   # relative to where uvicorn is launched (repo root)
+        env_file=("backend/.env", ".env"),  # tuple = try both paths
         env_file_encoding="utf-8",
-        extra="ignore",            # silently ignore any extra keys in .env
+        extra="ignore",
     )
 
     @property

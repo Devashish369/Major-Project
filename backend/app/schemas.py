@@ -254,3 +254,18 @@ class ActivityLogOut(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ── AI Planner (M4) ───────────────────────────────────────────────────────────
+
+class GeneratePlanRequest(BaseModel):
+    """Body for POST /ai/generate-plan."""
+    description: str = Field(..., min_length=10, max_length=5000)
+    team_size: int = Field(default=3, ge=1, le=50)
+    duration_weeks: int = Field(default=8, ge=1, le=104)
+
+
+class ApplyPlanRequest(BaseModel):
+    """Body for POST /projects/{id}/apply-plan (admin only)."""
+    plan: dict            # the plan dict from generate-plan
+    source: str = "llm"  # "llm" or "fallback" – stored in activity log
