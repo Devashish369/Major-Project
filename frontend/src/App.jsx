@@ -20,6 +20,7 @@ import HealthPage from './pages/HealthPage';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
+import ProjectPage from './pages/ProjectPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,6 +46,15 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <DashboardPage />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/projects/:id"
+              element={
+                <ProtectedRoute>
+                  <ProjectPage />
                 </ProtectedRoute>
               }
             />

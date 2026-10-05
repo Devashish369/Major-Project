@@ -5,32 +5,32 @@
 
 ## Current status
 
-- **Current module:** M1 ☑ DONE – next is M2 (Projects + Members)
-- **Last session:** 2026-10-05 / Antigravity AI / M1 Auth complete
-- **Known bugs:** JWT warning in tests (test SECRET_KEY is 23 bytes; real .env key is fine)
-- **Next step:** M2 – Projects + members + user skills + capacity
+- **Current module:** M2 ☑ DONE – next is M3 (Tasks, Kanban, dependencies, activity log)
+- **Last session:** 2026-10-05 / Antigravity AI / M2 Projects + Members complete
+- **Known bugs:** none
+- **Next step:** M3 – Tasks, Kanban drag/drop, dependencies (cycle check), activity log
 
 ## Module checklist
 
-| Module | Description | Priority | Status | Target date |
-|---|---|---|---|---|
-| M0 | Repo, backend skeleton, frontend shell | MUST | ☑ | Oct 5 |
-| M1 | Auth | MUST | ☑ | Oct 6 |
-| M2 | Projects, members, skills, capacity | MUST | ☐ | Oct 6 |
-| M3 | Tasks, Kanban, dependencies, activity log | MUST | ☐ | Oct 7 |
-| M4 | AI planner (LLM + fallback) | MUST | ☐ | Oct 8 |
-| M5 | Assignment optimizer + workload | MUST | ☐ | Oct 9 |
-| M6 | Estimator model on public data | MUST | ☐ | Oct 9 |
-| M7 | Forecast + health score | MUST | ☐ | Oct 10 |
-| M8 | Risk classifier + NASA93 benchmark | MUST | ☐ | Oct 11 |
-| M9 | Dashboard + analytics charts | MUST | ☐ | Oct 11 |
-| M10 | 16 demo projects seeded | MUST | ☐ | Oct 12 |
-| M11 | Dependency graph | SHOULD | ☐ | Oct 12 |
-| M12 | Decision log + Ask | SHOULD | ☐ | Oct 13 |
-| M13 | WebSocket live updates | STRETCH | ☐ | Oct 13 |
-| M14 | Postgres switch, deploy, freeze | FINAL | ☐ | Oct 14 |
-| M15 | Tests, README, report, deck | FINAL | ☐ | Oct 15 |
-| — | Rehearsal only, no new features | — | ☐ | Oct 16–17 |
+| Module | Description                               | Priority | Status | Target date |
+| ------ | ----------------------------------------- | -------- | ------ | ----------- |
+| M0     | Repo, backend skeleton, frontend shell    | MUST     | ☑     | Oct 5       |
+| M1     | Auth                                      | MUST     | ☑     | Oct 6       |
+| M2     | Projects, members, skills, capacity       | MUST     | ☑     | Oct 6       |
+| M3     | Tasks, Kanban, dependencies, activity log | MUST     | ☐     | Oct 7       |
+| M4     | AI planner (LLM + fallback)               | MUST     | ☐     | Oct 8       |
+| M5     | Assignment optimizer + workload           | MUST     | ☐     | Oct 9       |
+| M6     | Estimator model on public data            | MUST     | ☐     | Oct 9       |
+| M7     | Forecast + health score                   | MUST     | ☐     | Oct 10      |
+| M8     | Risk classifier + NASA93 benchmark        | MUST     | ☐     | Oct 11      |
+| M9     | Dashboard + analytics charts              | MUST     | ☐     | Oct 11      |
+| M10    | 16 demo projects seeded                   | MUST     | ☐     | Oct 12      |
+| M11    | Dependency graph                          | SHOULD   | ☐     | Oct 12      |
+| M12    | Decision log + Ask                        | SHOULD   | ☐     | Oct 13      |
+| M13    | WebSocket live updates                    | STRETCH  | ☐     | Oct 13      |
+| M14    | Postgres switch, deploy, freeze           | FINAL    | ☐     | Oct 14      |
+| M15    | Tests, README, report, deck               | FINAL    | ☐     | Oct 15      |
+| —     | Rehearsal only, no new features           | —       | ☐     | Oct 16–17  |
 
 Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` section 11 passes.
 
@@ -43,10 +43,11 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 
 ## Session log
 
-| Date | Account | Module | What was done | Bugs / notes |
-|---|---|---|---|---|
-| 2026-10-05 | Antigravity AI | M0 | Folder structure, backend venv + requirements.txt, config.py (pydantic-settings), database.py (SQLAlchemy 2.0 sync engine), main.py (CORS, response envelope ok()/err(), global error handler, GET /api/v1/health), .gitignore, .env.example, models.py placeholder, ai/fallback_plan.json; Vite+React+Tailwind v4 frontend with react-query, axios, react-router-dom, lucide-react; HealthPage.jsx calls /health and shows live JSON response | Tailwind v4 default @theme imported Inter from Google Fonts causing PostCSS ordering error → fixed by using tailwindcss/preflight + tailwindcss/utilities separately and loading Inter via HTML link tag |
-| 2026-10-05 | Antigravity AI | M1 | models.py (User, SQLAlchemy 2.0), schemas.py (Pydantic v2 UserCreate/Login/Update/Out, TokenOut), security.py (bcrypt hash/verify, PyJWT create/decode), deps.py (get_current_user), routers/auth.py (register/login/me/patch-me), main.py updated to lifespan pattern + auth router; frontend: AuthContext (localStorage + /me validation on mount), ProtectedRoute, LoginPage, RegisterPage, DashboardPage placeholder; 18/18 pytest tests pass | Added email-validator dep for Pydantic EmailStr; replaced deprecated on_event with lifespan context manager |
+| Date       | Account        | Module | What was done                                                                                                                                                                                                                                                                                                                                                                                                                                     | Bugs / notes                                                                                                                                                                                              |
+| ---------- | -------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 2026-10-05 | Antigravity AI | M0     | Folder structure, backend venv + requirements.txt, config.py (pydantic-settings), database.py (SQLAlchemy 2.0 sync engine), main.py (CORS, response envelope ok()/err(), global error handler, GET /api/v1/health), .gitignore, .env.example, models.py placeholder, ai/fallback_plan.json; Vite+React+Tailwind v4 frontend with react-query, axios, react-router-dom, lucide-react; HealthPage.jsx calls /health and shows live JSON response    | Tailwind v4 default @theme imported Inter from Google Fonts causing PostCSS ordering error → fixed by using tailwindcss/preflight + tailwindcss/utilities separately and loading Inter via HTML link tag |
+| 2026-10-05 | Antigravity AI | M1     | models.py (User, SQLAlchemy 2.0), schemas.py (Pydantic v2 UserCreate/Login/Update/Out, TokenOut), security.py (bcrypt hash/verify, PyJWT create/decode), deps.py (get_current_user), routers/auth.py (register/login/me/patch-me), main.py updated to lifespan pattern + auth router; frontend: AuthContext (localStorage + /me validation on mount), ProtectedRoute, LoginPage, RegisterPage, DashboardPage placeholder; 18/18 pytest tests pass | Added email-validator dep for Pydantic EmailStr; replaced deprecated on_event with lifespan context manager |
+| 2026-10-05 | Antigravity AI | M2     | models.py: Project + ProjectMember (SQLAlchemy 2.0, cascade, UniqueConstraint); schemas.py: ProjectCreate/Update/Out + MemberAdd/Update/Out; deps.py: get_membership (404 non-members) + require_admin (403); routers/projects.py + routers/members.py (last-admin guard); conftest.py refactored as shared fixture; 40/40 tests; frontend: DashboardPage (project grid + New Project modal), ProjectPage (Overview + Team tabs), CreateProjectModal, AddMemberModal, SkillsEditor slide-out panel, api/projects.js | none |
 
 ## Human checklist (do these yourself, not the AI)
 
@@ -85,6 +86,7 @@ and shows the result. Give exact commands to run both servers.
 ## Final review checklist for Opus (Oct 14)
 
 Review the repo against PROJECT_SPEC.md and report only concrete problems:
+
 1. Does each API in section 7 exist and match the envelope and permissions rules?
 2. Do assignment, workload, forecast and health follow section 8 exactly? Show any deviation.
 3. Any endpoint missing auth or an admin check? Any SQL/IDOR issue (user reading another project's data)?

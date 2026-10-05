@@ -79,9 +79,13 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 
 # ── Register routers ──────────────────────────────────────────────────────────
 # Import AFTER ok/err are defined to avoid circular import issues.
-from app.routers import auth as auth_router  # noqa: E402
+from app.routers import auth as auth_router        # noqa: E402
+from app.routers import projects as projects_router  # noqa: E402
+from app.routers import members as members_router    # noqa: E402
 
-app.include_router(auth_router.router, prefix="/api/v1")
+app.include_router(auth_router.router,     prefix="/api/v1")
+app.include_router(projects_router.router, prefix="/api/v1")
+app.include_router(members_router.router,  prefix="/api/v1")
 
 # ── Health endpoint ───────────────────────────────────────────────────────────
 @app.get("/api/v1/health", tags=["health"])

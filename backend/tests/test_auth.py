@@ -1,8 +1,7 @@
 """
 tests/test_auth.py – Unit/integration tests for M1 auth endpoints.
 
-Uses FastAPI's TestClient (built on httpx) with an in-memory SQLite DB
-so tests are fast, isolated, and don't touch the real database.
+Uses FastAPI's TestClient with the shared in-memory SQLite DB from conftest.py.
 
 Tests cover the M1 "done when" criteria (section 11):
   ✓ Register a new user
@@ -18,45 +17,8 @@ Tests cover the M1 "done when" criteria (section 11):
 
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, StaticPool
-from sqlalchemy.orm import sessionmaker
 
 from app.main import app
-from app.database import Base, get_db
-
-# ── Test DB setup ─────────────────────────────────────────────────────────────
-# In-memory SQLite with StaticPool so the same connection is reused across
-# the test session (required for SQLite in-memory with multiple threads).
-TEST_DATABASE_URL = "sqlite:///:memory:"
-
-engine_test = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,
-)
-TestingSessionLocal = sessionmaker(bind=engine_test, autocommit=False, autoflush=False)
-
-
-def override_get_db():
-    """Replace the real DB session with the test in-memory one."""
-    db = TestingSessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
-
-
-# Override the dependency in the app before any request is made
-app.dependency_overrides[get_db] = override_get_db
-
-
-@pytest.fixture(autouse=True)
-def setup_db():
-    """Create all tables before each test, drop after."""
-    import app.models  # noqa: F401 – ensure models are registered
-    Base.metadata.create_all(bind=engine_test)
-    yield
-    Base.metadata.drop_all(bind=engine_test)
 
 
 @pytest.fixture

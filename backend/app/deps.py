@@ -1,28 +1,25 @@
 """
 deps.py – Reusable FastAPI dependencies for IntelliPM.
 
-M1: get_current_user  – reads the Bearer token from the Authorization header,
-                        decodes it, and returns the User ORM object.
-                        Raises HTTP 401 if missing or invalid.
+M1: get_current_user  – decode JWT → User ORM object; raise 401 if invalid.
+M2: get_membership    – verify caller is a member of a project; raise 404 if not.
+    require_admin     – verify caller is an admin of a project; raise 403 if not.
 
-Usage in a router:
-    current_user: User = Depends(get_current_user)
-
-Later modules will add get_current_admin_member(project_id) etc.
+IMPORTANT security rule (spec §7):
+  Non-members must get 404 (not 403) so they cannot enumerate project IDs.
 """
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, Path, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import User
+from app.models import Project, ProjectMember, User
 from app.security import decode_access_token
 
 
-# HTTPBearer extracts the token from "Authorization: Bearer <token>" header.
-# auto_error=False lets us raise a custom 401 instead of FastAPI's default.
+# ── JWT bearer extraction ─────────────────────────────────────────────────────
 bearer_scheme = HTTPBearer(auto_error=False)
 
 _CRED_EXCEPTION = HTTPException(
@@ -39,11 +36,6 @@ def get_current_user(
     """
     FastAPI dependency: validate JWT and return the authenticated User.
 
-    Flow:
-      1. Extract token string from Authorization: Bearer header.
-      2. Call decode_access_token() → user_id or None.
-      3. Look up User in DB; raise 401 if not found.
-
     Raises HTTP 401 for any invalid/expired/missing token.
     """
     if credentials is None:
@@ -53,9 +45,60 @@ def get_current_user(
     if user_id is None:
         raise _CRED_EXCEPTION
 
-    # SQLAlchemy 2.0: use select() not session.query()
     user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
     if user is None:
         raise _CRED_EXCEPTION
 
     return user
+
+
+# ── Project membership checks ─────────────────────────────────────────────────
+
+def get_membership(
+    project_id: int = Path(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+) -> ProjectMember:
+    """
+    Verify the calling user is a member of project_id.
+
+    Returns the ProjectMember row (contains role + capacity).
+    Raises HTTP 404 for both "project doesn't exist" and "user is not a member"
+    so callers cannot enumerate project IDs they don't belong to.
+    """
+    # Check project exists first (separate query so the 404 is unambiguous in logs)
+    project = db.execute(
+        select(Project).where(Project.id == project_id)
+    ).scalar_one_or_none()
+    if project is None:
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    membership = db.execute(
+        select(ProjectMember).where(
+            ProjectMember.project_id == project_id,
+            ProjectMember.user_id == current_user.id,
+        )
+    ).scalar_one_or_none()
+
+    if membership is None:
+        # Return 404 – do NOT reveal the project exists to non-members
+        raise HTTPException(status_code=404, detail="Project not found.")
+
+    return membership
+
+
+def require_admin(
+    membership: ProjectMember = Depends(get_membership),
+) -> ProjectMember:
+    """
+    Verify the calling user is an ADMIN of the project.
+
+    Raises HTTP 403 (not 404) because a non-admin member already knows the
+    project exists; hiding it would be confusing UX.
+    """
+    if membership.role != "admin":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin role required for this action.",
+        )
+    return membership
