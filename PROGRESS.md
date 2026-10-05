@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M4 ☑ DONE – next is M5 (Assignment optimizer, workload, /assign, /workload)
-- **Last session:** 2026-10-05 / Antigravity AI / M4 LLM planner + Plan tab complete
+- **Current module:** M5 ☑ DONE – next is M6 (Estimator model, /ai/estimate, planner sanity-check)
+- **Last session:** 2026-10-05 / Antigravity AI / M5 Assignment optimizer + workload complete
 - **Known bugs:** none
-- **Next step:** M5 – scipy linear_sum_assignment, workload labels, GET /workload, POST /assign
+- **Next step:** M6 – train TF-IDF+Ridge on Datasets/ CSVs, save estimator.joblib, GET /ai/estimate
 
 ## Module checklist
 
@@ -19,7 +19,7 @@
 | M2     | Projects, members, skills, capacity       | MUST     | ☑     | Oct 6       |
 | M3     | Tasks, Kanban, dependencies, activity log | MUST     | ☑     | Oct 7       |
 | M4     | AI planner (LLM + fallback)               | MUST     | ☑     | Oct 8       |
-| M5     | Assignment optimizer + workload           | MUST     | ☐     | Oct 9       |
+| M5     | Assignment optimizer + workload           | MUST     | ☑     | Oct 5       |
 | M6     | Estimator model on public data            | MUST     | ☐     | Oct 9       |
 | M7     | Forecast + health score                   | MUST     | ☐     | Oct 10      |
 | M8     | Risk classifier + NASA93 benchmark        | MUST     | ☐     | Oct 11      |
@@ -50,6 +50,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-05 | Antigravity AI | M2     | models.py: Project + ProjectMember (SQLAlchemy 2.0, cascade, UniqueConstraint); schemas.py: ProjectCreate/Update/Out + MemberAdd/Update/Out; deps.py: get_membership (404 non-members) + require_admin (403); routers/projects.py + routers/members.py (last-admin guard); conftest.py refactored as shared fixture; 40/40 tests; frontend: DashboardPage (project grid + New Project modal), ProjectPage (Overview + Team tabs), CreateProjectModal, AddMemberModal, SkillsEditor slide-out panel, api/projects.js | none |
 | 2026-10-05 | Antigravity AI | M3     | models.py: Task (completed_at, required_skills JSON, sprint_id nullable) + TaskDependency (UniqueConstraint, cascade) + ActivityLog (append-only audit) + Sprint; schemas.py: TaskCreate/Update/Out + DependencyAdd/Out + ActivityLogOut; services/tasks.py: apply_status_change (completed_at rule), write_activity (audit), has_cycle (DFS O(V+E)); routers/tasks.py: full CRUD + dep add/remove (cycle-checked) + activity endpoint; routers/projects.py updated with real task_count/done_ratio; 59/59 tests; frontend: KanbanBoard (@dnd-kit, 3 columns, drag persists via PATCH), TaskDrawer (inline edit, deps, completed_at), CreateTaskModal, api/tasks.js; Board tab added to ProjectPage (default) | none |
 | 2026-10-05 | Antigravity AI | M4     | ai/fallback_plan.json (15-task hospital system, 4 sprints); services/llm.py (openai SDK, Groq primary + Gemini fallback, temp=0, 30s timeout); services/planner.py (Plan/TaskPlan/SprintPlan Pydantic schemas, generate_plan with 4-level fallback flow, DFS cycle-break, clamp hours, lowercase skills, cap 40 tasks); routers/ai.py (POST /ai/generate-plan + POST /projects/{id}/apply-plan admin-only atomic transaction); schemas.py M4 additions; config.py env_file tuple fix; 77/77 tests; frontend: PlanTab.jsx (description input, team size, duration, source badge AI/Cached, sprint accordion, apply button); api/ai.js; Plan tab in ProjectPage; Live Groq (openai/gpt-oss-120b) verified with real key | Groq model name in .env.example was incorrect (llama-3.3-70b-versatile); corrected to openai/gpt-oss-120b which matches the account's available models |
+| 2026-10-05 | Antigravity AI | M5     | services/assignment.py (scipy linear_sum_assignment, skill_match=avg(level/5) or 0.5, availability=clip(1-(open+est)/cap,0,1), score=0.5sm+0.3av+0.2perf, k-slots per member, priority-ordered batching, zero-capacity guard, plain-English reason); services/workload.py (utilization ratio, 4 labels: overloaded/at_risk/healthy/available); routers/assignments.py (POST /recommend no-DB-write, POST /apply admin-only atomic, GET /analytics/workload); schemas M5 additions; 105/105 tests; frontend: WorkloadBar with label badges (colour-coded), RecommendPanel (table with skill/avail/perf/score/reason, Apply button), TeamTab rewritten with workload query per member; api/assignments.js | none |
 
 ## Human checklist (do these yourself, not the AI)
 

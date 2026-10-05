@@ -269,3 +269,15 @@ class ApplyPlanRequest(BaseModel):
     """Body for POST /projects/{id}/apply-plan (admin only)."""
     plan: dict            # the plan dict from generate-plan
     source: str = "llm"  # "llm" or "fallback" – stored in activity log
+
+
+# ── Assignment optimizer (M5) ─────────────────────────────────────────────────
+
+class AssignmentRecommendRequest(BaseModel):
+    """Body for POST /projects/{id}/assignments/recommend."""
+    force: bool = False   # if True, also re-optimise already-assigned tasks
+
+
+class AssignmentApplyRequest(BaseModel):
+    """Body for POST /projects/{id}/assignments/apply (admin only)."""
+    assignments: list[dict]   # [{task_id: int, user_id: int}, ...]
