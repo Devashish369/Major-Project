@@ -18,8 +18,9 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.deps import get_current_user, get_membership, require_admin
-from app.models import Project, ProjectMember, Task, User
+from app.models import Project, ProjectMember, Task, TaskDependency, User
 from app.schemas import ProjectCreate, ProjectOut, ProjectUpdate
+from app.services.health import compute_health
 from app.main import ok
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -52,7 +53,58 @@ def _project_out(project: Project, db: Session) -> dict:
     ).scalar_one()
 
     done_ratio = (done_count / task_count) if task_count > 0 else 0.0
-    health_score = None   # M7
+
+    # M7: compute health score from tasks + dependencies + member utilization
+    all_tasks_raw = db.execute(
+        select(Task).where(Task.project_id == project.id)
+    ).scalars().all()
+    task_ids = [t.id for t in all_tasks_raw]
+    deps_raw = db.execute(
+        select(TaskDependency).where(TaskDependency.task_id.in_(task_ids))
+    ).scalars().all() if task_ids else []
+
+    members_raw = db.execute(
+        select(ProjectMember).where(ProjectMember.project_id == project.id)
+    ).scalars().all()
+
+    from datetime import date as _date
+    today = _date.today()
+    weeks_remaining = max(1, (
+        (_date.fromisoformat(project.due_date) - today).days
+        if project.due_date else 28
+    )) / 7
+
+    member_utils = []
+    for m in members_raw:
+        open_h = sum(
+            (t.estimate_hours or 0)
+            for t in all_tasks_raw
+            if t.assignee_id == m.user_id and t.status != "done"
+        )
+        cap = m.capacity_hours_per_week * weeks_remaining
+        member_utils.append(open_h / cap if cap > 0 else 0.0)
+
+    health_result = compute_health(
+        start_date=project.start_date,
+        due_date=project.due_date,
+        all_tasks=[
+            {
+                "id": t.id,
+                "status": t.status,
+                "estimate_hours": t.estimate_hours,
+                "actual_hours": t.actual_hours,
+                "due_date": t.due_date,
+            }
+            for t in all_tasks_raw
+        ],
+        dependencies=[
+            {"task_id": d.task_id, "depends_on_id": d.depends_on_id}
+            for d in deps_raw
+        ],
+        member_utilizations=member_utils,
+        today=today,
+    )
+    health_score = health_result["health_score"]
 
     return ProjectOut(
         id=project.id,

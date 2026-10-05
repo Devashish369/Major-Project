@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M6 ☑ DONE – next is M7 (Forecast + health score)
-- **Last session:** 2026-10-05 / Antigravity AI / M6 Estimator model complete
+- **Current module:** M7 ☑ DONE – next is M8 (Risk classifier + NASA93 benchmark)
+- **Last session:** 2026-10-06 / Antigravity AI / M7 Forecast + health score complete
 - **Known bugs:** none
-- **Next step:** M7 – Monte Carlo forecast, health score formula, GET /projects/{id}/analytics/forecast + health
+- **Next step:** M8 – generate_synthetic.py (3000+ snapshots), train risk classifier, GET /projects/{id}/analytics/risk
 
 ## Module checklist
 
@@ -21,7 +21,7 @@
 | M4     | AI planner (LLM + fallback)               | MUST     | ☑     | Oct 8       |
 | M5     | Assignment optimizer + workload           | MUST     | ☑     | Oct 5       |
 | M6     | Estimator model on public data            | MUST     | ☑     | Oct 5       |
-| M7     | Forecast + health score                   | MUST     | ☐     | Oct 10      |
+| M7     | Forecast + health score                   | MUST     | ☑     | Oct 6       |
 | M8     | Risk classifier + NASA93 benchmark        | MUST     | ☐     | Oct 11      |
 | M9     | Dashboard + analytics charts              | MUST     | ☐     | Oct 11      |
 | M10    | 16 demo projects seeded                   | MUST     | ☐     | Oct 12      |
@@ -52,6 +52,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-05 | Antigravity AI | M4     | ai/fallback_plan.json (15-task hospital system, 4 sprints); services/llm.py (openai SDK, Groq primary + Gemini fallback, temp=0, 30s timeout); services/planner.py (Plan/TaskPlan/SprintPlan Pydantic schemas, generate_plan with 4-level fallback flow, DFS cycle-break, clamp hours, lowercase skills, cap 40 tasks); routers/ai.py (POST /ai/generate-plan + POST /projects/{id}/apply-plan admin-only atomic transaction); schemas.py M4 additions; config.py env_file tuple fix; 77/77 tests; frontend: PlanTab.jsx (description input, team size, duration, source badge AI/Cached, sprint accordion, apply button); api/ai.js; Plan tab in ProjectPage; Live Groq (openai/gpt-oss-120b) verified with real key | Groq model name in .env.example was incorrect; corrected to openai/gpt-oss-120b |
 | 2026-10-05 | Antigravity AI | M5     | services/assignment.py (scipy linear_sum_assignment, skill_match=avg(level/5) or 0.5, availability=clip(1-(open+est)/cap,0,1), score=0.5sm+0.3av+0.2perf, k-slots per member, priority-ordered batching, zero-capacity guard, plain-English reason); services/workload.py (utilization ratio, 4 labels); routers/assignments.py (POST /recommend no-DB-write, POST /apply admin-only atomic, GET /analytics/workload); 105/105 tests; frontend: WorkloadBar (colour-coded labels), RecommendPanel (table + Apply), TeamTab rewritten; api/assignments.js | none |
 | 2026-10-05 | Antigravity AI | M6     | ml/train_estimator.py (loads 16 CSVs from Datasets/marked_data/, adds project col, drops null sp, TF-IDF(20k bigrams sublinear)+Ridge on log1p(sp) target, expm1 inverse, clips [0.5,40], beats predict-the-median baseline: test MAE 3.14 < 3.26, MdAE 1.89 < 2.0); ml/artifacts/estimator.joblib + estimator_metrics.json committed; services/estimator.py (lazy-load, clip, hours=sp×HOURS_PER_STORY_POINT); routers/ai.py extended with POST /ai/estimate; schemas EstimateRequest; 117/117 tests; frontend: api/estimator.js; PlanTab shows model estimate alongside LLM, flags >3× divergence with ⚠ review badge; never overwrites LLM value | Path bug: _JOBLIB_PATH was parent.parent (→ app/ml/) not parent.parent.parent (→ ml/); fixed |
+| 2026-10-06 | Antigravity AI | M7     | services/forecast.py (5000-run Monte Carlo, seeded RNG seed=42, log-normal overrun mu=0.1 sigma=0.35, critical-path DFS over dependency DAG, effective_per_day=sum(cap)/5×0.7, parallel vs CP duration=max, auto-calibrate mu/sigma from ≥10 completed tasks, 30-bin histogram with zero-range guard); services/health.py (exact spec formula: 100−30×overdue−20×blocked−15×overload−35×slip, 4 penalties returned, 3 levels); routers/analytics.py (GET /analytics/forecast + GET /analytics/health, both member-only 404); projects.py _project_out now calls compute_health (replaces None placeholder); 146/146 tests (29 new M7 tests) | Calibration test used identical ratios → sigma=0 → histogram crash; fixed by zero-range guard and varied test data |
 
 ## Human checklist (do these yourself, not the AI)
 
