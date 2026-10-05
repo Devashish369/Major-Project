@@ -1,0 +1,116 @@
+{
+  "dataset": "NASA93 (public)",
+  "source": "Datasets/nasa93.arff",
+  "n_projects": 93,
+  "note": "benchmark on public NASA93 data (93 projects)",
+  "model": "GradientBoostingRegressor(n_estimators=200, max_depth=3, lr=0.05)",
+  "cv_folds": 5,
+  "cv_mae_mean": 308.1,
+  "cv_mae_std": 131.35,
+  "cv_r2_mean": 0.2723,
+  "cv_r2_std": 0.6318,
+  "target": "act_effort (person-months)",
+  "features": [
+    "rely",
+    "data",
+    "cplx",
+    "time",
+    "stor",
+    "virt",
+    "turn",
+    "acap",
+    "aexp",
+    "pcap",
+    "vexp",
+    "lexp",
+    "modp",
+    "tool",
+    "sced",
+    "equivphyskloc"
+  ],
+  "feature_importances": {
+    "rely": 0.053205,
+    "data": 0.007681,
+    "cplx": 0.012463,
+    "time": 0.314754,
+    "stor": 0.067431,
+    "virt": 0.016717,
+    "turn": 0.005731,
+    "acap": 0.010069,
+    "aexp": 0.004645,
+    "pcap": 0.000585,
+    "vexp": 0.00645,
+    "lexp": 0.000385,
+    "modp": 0.011924,
+    "tool": 0.020387,
+    "sced": 0.017532,
+    "equivphyskloc": 0.450042
+  },
+  "feature_importances_sorted": [
+    {
+      "feature": "equivphyskloc",
+      "importance": 0.450042
+    },
+    {
+      "feature": "time",
+      "importance": 0.314754
+    },
+    {
+      "feature": "stor",
+      "importance": 0.067431
+    },
+    {
+      "feature": "rely",
+      "importance": 0.053205
+    },
+    {
+      "feature": "tool",
+      "importance": 0.020387
+    },
+    {
+      "feature": "sced",
+      "importance": 0.017532
+    },
+    {
+      "feature": "virt",
+      "importance": 0.016717
+    },
+    {
+      "feature": "cplx",
+      "importance": 0.012463
+    },
+    {
+      "feature": "modp",
+      "importance": 0.011924
+    },
+    {
+      "feature": "acap",
+      "importance": 0.010069
+    },
+    {
+      "feature": "data",
+      "importance": 0.007681
+    },
+    {
+      "feature": "vexp",
+      "importance": 0.00645
+    },
+    {
+      "feature": "turn",
+      "importance": 0.005731
+    },
+    {
+      "feature": "aexp",
+      "importance": 0.004645
+    },
+    {
+      "feature": "pcap",
+      "importance": 0.000585
+    },
+    {
+      "feature": "lexp",
+      "importance": 0.000385
+    }
+  ],
+  "cocomo_encoding": "vl=0, l=1, n=2, h=3, vh=4, xh=5"
+}

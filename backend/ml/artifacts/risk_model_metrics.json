@@ -1,0 +1,73 @@
+{
+  "model": "GradientBoostingClassifier(n_estimators=200, max_depth=4, lr=0.05)",
+  "training_data": "SIMULATED (generate_synthetic.py) \u2013 NOT real project history",
+  "n_train": 3200,
+  "n_test": 800,
+  "accuracy": 0.9337,
+  "precision": 0.9206,
+  "recall": 0.9119,
+  "confusion_matrix": [
+    [
+      457,
+      25
+    ],
+    [
+      28,
+      290
+    ]
+  ],
+  "feature_importances": {
+    "team_size": 0.00908,
+    "avg_utilization": 0.026752,
+    "overdue_ratio": 0.018712,
+    "blocked_ratio": 0.029271,
+    "slip": 0.02085,
+    "remaining_ratio": 0.828051,
+    "done_ratio": 0.023987,
+    "days_to_due": 0.043296
+  },
+  "feature_importances_sorted": [
+    {
+      "feature": "remaining_ratio",
+      "importance": 0.828051
+    },
+    {
+      "feature": "days_to_due",
+      "importance": 0.043296
+    },
+    {
+      "feature": "blocked_ratio",
+      "importance": 0.029271
+    },
+    {
+      "feature": "avg_utilization",
+      "importance": 0.026752
+    },
+    {
+      "feature": "done_ratio",
+      "importance": 0.023987
+    },
+    {
+      "feature": "slip",
+      "importance": 0.02085
+    },
+    {
+      "feature": "overdue_ratio",
+      "importance": 0.018712
+    },
+    {
+      "feature": "team_size",
+      "importance": 0.00908
+    }
+  ],
+  "features": [
+    "team_size",
+    "avg_utilization",
+    "overdue_ratio",
+    "blocked_ratio",
+    "slip",
+    "remaining_ratio",
+    "done_ratio",
+    "days_to_due"
+  ]
+}

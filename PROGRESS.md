@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M7 ☑ DONE – next is M8 (Risk classifier + NASA93 benchmark)
-- **Last session:** 2026-10-06 / Antigravity AI / M7 Forecast + health score complete
+- **Current module:** M8 ☑ DONE – next is M9 (Dashboard + analytics charts)
+- **Last session:** 2026-10-06 / Antigravity AI / M8 Risk classifier + NASA93 effort benchmark
 - **Known bugs:** none
-- **Next step:** M8 – generate_synthetic.py (3000+ snapshots), train risk classifier, GET /projects/{id}/analytics/risk
+- **Next step:** M9 – AnalyticsTab (health score panel, forecast histogram, burndown, risk card)
 
 ## Module checklist
 
@@ -22,7 +22,7 @@
 | M5     | Assignment optimizer + workload           | MUST     | ☑     | Oct 5       |
 | M6     | Estimator model on public data            | MUST     | ☑     | Oct 5       |
 | M7     | Forecast + health score                   | MUST     | ☑     | Oct 6       |
-| M8     | Risk classifier + NASA93 benchmark        | MUST     | ☐     | Oct 11      |
+| M8     | Risk classifier + NASA93 benchmark        | MUST     | ☑     | Oct 6       |
 | M9     | Dashboard + analytics charts              | MUST     | ☐     | Oct 11      |
 | M10    | 16 demo projects seeded                   | MUST     | ☐     | Oct 12      |
 | M11    | Dependency graph                          | SHOULD   | ☐     | Oct 12      |
@@ -53,6 +53,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-05 | Antigravity AI | M5     | services/assignment.py (scipy linear_sum_assignment, skill_match=avg(level/5) or 0.5, availability=clip(1-(open+est)/cap,0,1), score=0.5sm+0.3av+0.2perf, k-slots per member, priority-ordered batching, zero-capacity guard, plain-English reason); services/workload.py (utilization ratio, 4 labels); routers/assignments.py (POST /recommend no-DB-write, POST /apply admin-only atomic, GET /analytics/workload); 105/105 tests; frontend: WorkloadBar (colour-coded labels), RecommendPanel (table + Apply), TeamTab rewritten; api/assignments.js | none |
 | 2026-10-05 | Antigravity AI | M6     | ml/train_estimator.py (loads 16 CSVs from Datasets/marked_data/, adds project col, drops null sp, TF-IDF(20k bigrams sublinear)+Ridge on log1p(sp) target, expm1 inverse, clips [0.5,40], beats predict-the-median baseline: test MAE 3.14 < 3.26, MdAE 1.89 < 2.0); ml/artifacts/estimator.joblib + estimator_metrics.json committed; services/estimator.py (lazy-load, clip, hours=sp×HOURS_PER_STORY_POINT); routers/ai.py extended with POST /ai/estimate; schemas EstimateRequest; 117/117 tests; frontend: api/estimator.js; PlanTab shows model estimate alongside LLM, flags >3× divergence with ⚠ review badge; never overwrites LLM value | Path bug: _JOBLIB_PATH was parent.parent (→ app/ml/) not parent.parent.parent (→ ml/); fixed |
 | 2026-10-06 | Antigravity AI | M7     | services/forecast.py (5000-run Monte Carlo, seeded RNG seed=42, log-normal overrun mu=0.1 sigma=0.35, critical-path DFS over dependency DAG, effective_per_day=sum(cap)/5×0.7, parallel vs CP duration=max, auto-calibrate mu/sigma from ≥10 completed tasks, 30-bin histogram with zero-range guard); services/health.py (exact spec formula: 100−30×overdue−20×blocked−15×overload−35×slip, 4 penalties returned, 3 levels); routers/analytics.py (GET /analytics/forecast + GET /analytics/health, both member-only 404); projects.py _project_out now calls compute_health (replaces None placeholder); 146/146 tests (29 new M7 tests) | Calibration test used identical ratios → sigma=0 → histogram crash; fixed by zero-range guard and varied test data |
+| 2026-10-06 | Antigravity AI | M8     | ml/generate_synthetic.py (4000 snapshots, 8 features, 200-sim MC labelling + 8% noise); ml/train_risk.py (GradientBoostingClassifier n_estimators=200 depth=4 lr=0.05; acc=93.4% prec=92.1% rec=91.2%; saves risk_model.joblib + risk_model_metrics.json; clearly documents SIMULATED data); ml/train_effort.py (NASA93 93 projects, COCOMO ratings vl/l/n/h/vh/xh → 0-5, GBR 5-fold CV MAE + R², saves effort_model.joblib + effort_model_metrics.json); services/risk.py (lazy-load, predict_proba, top_3_factors by importance); health endpoint enriched with risk field; GET /ml/effort-benchmark; BenchmarksPage.jsx (3 sections: NASA93, risk disclaimer, task estimator; feature bars, confusion matrix); App.jsx /benchmarks route; 169/169 tests (23 new M8) | Test path: parent.parent.parent gave MajorProject/ml instead of backend/ml; fixed to parent.parent |
 
 ## Human checklist (do these yourself, not the AI)
 

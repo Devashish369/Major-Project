@@ -29,6 +29,9 @@ from app.models import Project, ProjectMember, Task, TaskDependency, User
 from app.services.forecast import run_forecast
 from app.services.health import compute_health
 from app.main import ok
+import json
+import logging
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -177,4 +180,68 @@ def get_health(
         member_utilizations=member_utilizations,
     )
 
+    # M8: enrich with ML risk probability + top 3 factors
+    try:
+        from app.services.risk import predict_risk
+        diag = result["diagnostics"]
+        risk_result = predict_risk(
+            team_size=max(1, len(members)),
+            avg_utilization=diag["max_utilization"],
+            overdue_ratio=diag["overdue_ratio"],
+            blocked_ratio=diag["blocked_ratio"],
+            slip=diag["slip"],
+            remaining_ratio=max(0.0, 1.0 - diag["actual_progress"]),
+            done_ratio=diag["actual_progress"],
+            days_to_due=(
+                (date.fromisoformat(project.due_date) - date.today()).days
+                if project.due_date else 30
+            ),
+        )
+        result["risk"] = risk_result
+    except Exception as e:
+        logger.warning("Risk model not available: %s", e)
+        result["risk"] = None
+
     return ok(data=result, message="Health score computed.")
+
+
+# ── GET /ml/effort-benchmark ─────────────────────────────────────────────────
+
+@router.get("/ml/effort-benchmark")
+def get_effort_benchmark(
+    current_user=Depends(get_current_user),
+):
+    """
+    Return NASA93 effort model benchmark metrics.
+
+    Labelled: "benchmark on public NASA93 data (93 projects)"
+    The model is a GradientBoostingRegressor trained on COCOMO features.
+    """
+    metrics_path = (
+        Path(__file__).parent.parent.parent / "ml" / "artifacts" / "effort_model_metrics.json"
+    )
+    if not metrics_path.exists():
+        from fastapi import HTTPException
+        raise HTTPException(status_code=503, detail="Effort model not trained yet. Run ml/train_effort.py.")
+
+    with open(metrics_path) as f:
+        metrics = json.load(f)
+
+    # Also attach risk model metrics if available
+    risk_metrics_path = (
+        Path(__file__).parent.parent.parent / "ml" / "artifacts" / "risk_model_metrics.json"
+    )
+    risk_metrics = None
+    if risk_metrics_path.exists():
+        with open(risk_metrics_path) as f:
+            risk_metrics = json.load(f)
+
+    return ok(
+        data={
+            "effort": metrics,
+            "risk":   risk_metrics,
+            "label":  "benchmark on public NASA93 data (93 projects)",
+            "risk_data_note": "Risk model trained on SIMULATED data (not real project history).",
+        },
+        message="Benchmark metrics loaded.",
+    )

@@ -21,6 +21,7 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectPage from './pages/ProjectPage';
+import BenchmarksPage from './pages/BenchmarksPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -55,6 +56,18 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProjectPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* M8: Benchmarks page (NASA93 + risk model metrics) */}
+            <Route
+              path="/benchmarks"
+              element={
+                <ProtectedRoute>
+                  <div className="min-h-screen bg-slate-900 p-6">
+                    <BenchmarksPage />
+                  </div>
                 </ProtectedRoute>
               }
             />
