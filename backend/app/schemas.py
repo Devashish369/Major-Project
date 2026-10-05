@@ -281,3 +281,11 @@ class AssignmentRecommendRequest(BaseModel):
 class AssignmentApplyRequest(BaseModel):
     """Body for POST /projects/{id}/assignments/apply (admin only)."""
     assignments: list[dict]   # [{task_id: int, user_id: int}, ...]
+
+
+# ── Estimator (M6) ────────────────────────────────────────────────────────────
+
+class EstimateRequest(BaseModel):
+    """Body for POST /ai/estimate (spec §8.6)."""
+    title: str = Field(..., min_length=1, max_length=500)
+    description: Optional[str] = Field(default=None, max_length=10000)

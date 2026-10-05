@@ -17,8 +17,12 @@ dist/
 # Datasets (large, gitignored per spec)
 Datasets/
 
-# ML artifacts (trained models)
-backend/app/ml/artifacts/*.joblib
+# ML artifacts – joblib and metrics ARE committed (spec §11 M6); venv-local only
+# backend/ml/artifacts/ is committed (estimator.joblib + estimator_metrics.json)
+
+# Large intermediate files (if any) that should NOT be committed
+*.tmp_model
+
 
 # OS files
 .DS_Store

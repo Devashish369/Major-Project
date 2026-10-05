@@ -1,22 +1,26 @@
 /**
- * components/PlanTab.jsx – AI Project Planner tab (M4).
+ * components/PlanTab.jsx – AI Project Planner tab (M4/M6).
  *
  * UI flow:
  *   1. User enters a description, team size, duration.
  *   2. Click "Generate Plan" → calls POST /ai/generate-plan.
  *   3. Draft plan is shown: AI/Cached label, sprints, task cards.
+ *      Each task card also shows the model’s suggested estimate (M6)
+ *      and flags tasks where LLM and model differ by more than 3×.
  *   4. Admin clicks "Apply to Project" → calls POST /projects/{id}/apply-plan.
  *
  * Spec §8.1: source "llm" → green "AI Generated" badge,
  *             source "fallback" → amber "Cached Plan" badge.
+ * Spec §8.6: model estimate shown as a suggestion; never overwrites LLM value.
  */
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   Sparkles, Loader2, ChevronRight, CheckCircle2, AlertTriangle,
-  Cpu, Archive, Play,
+  Cpu, Archive, Play, FlaskConical,
 } from 'lucide-react';
 import { generatePlan, applyPlan } from '../api/ai';
+import { estimateTask } from '../api/estimator';
 
 const PRIORITY_COLORS = {
   low: 'text-slate-400', medium: 'text-amber-400',
@@ -42,7 +46,8 @@ function SourceBadge({ source }) {
 }
 
 // ── Plan preview ──────────────────────────────────────────────────────────────
-function PlanPreview({ plan }) {
+// modelEstimates: { title → {story_points, hours} } fetched from /ai/estimate
+function PlanPreview({ plan, modelEstimates = {} }) {
   const [openSprint, setOpenSprint] = useState(null);
 
   const tasksBySprint = (idx) =>
@@ -98,40 +103,68 @@ function PlanPreview({ plan }) {
 
             {isOpen && (
               <div className="border-t border-slate-700 divide-y divide-slate-700/50">
-                {sprintTasks.map((task, ti) => (
-                  <div key={ti} className="px-4 py-3 hover:bg-slate-700/30 transition">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-0.5">
-                          <p className="text-sm font-medium text-white truncate">{task.title}</p>
-                          <span className={`text-xs font-medium ${PRIORITY_COLORS[task.priority] || ''}`}>
-                            {task.priority}
-                          </span>
-                        </div>
-                        {task.description && (
-                          <p className="text-xs text-slate-400 line-clamp-2">{task.description}</p>
-                        )}
-                        {(task.required_skills || []).length > 0 && (
-                          <div className="flex flex-wrap gap-1 mt-1.5">
-                            {task.required_skills.map((s) => (
-                              <span key={s} className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300">
-                                {s}
+                  {sprintTasks.map((task, ti) => {
+                    const modelEst = modelEstimates[task.title];
+                    const llmHours = task.estimate_hours;
+                    // Flag if model and LLM differ by more than 3× (spec §8.6)
+                    const diverges = modelEst && llmHours > 0 &&
+                      (llmHours / modelEst.hours > 3 || modelEst.hours / llmHours > 3);
+                    return (
+                      <div key={ti} className="px-4 py-3 hover:bg-slate-700/30 transition">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 mb-0.5">
+                              <p className="text-sm font-medium text-white truncate">{task.title}</p>
+                              <span className={`text-xs font-medium ${PRIORITY_COLORS[task.priority] || ''}`}>
+                                {task.priority}
                               </span>
-                            ))}
+                              {diverges && (
+                                <span
+                                  title={`LLM estimate (${llmHours}h) and model estimate (${modelEst.hours}h) differ by more than 3× — review manually.`}
+                                  className="inline-flex items-center gap-1 text-xs text-amber-400"
+                                >
+                                  <AlertTriangle className="h-3 w-3" />
+                                  review
+                                </span>
+                              )}
+                            </div>
+                            {task.description && (
+                              <p className="text-xs text-slate-400 line-clamp-2">{task.description}</p>
+                            )}
+                            {(task.required_skills || []).length > 0 && (
+                              <div className="flex flex-wrap gap-1 mt-1.5">
+                                {task.required_skills.map((s) => (
+                                  <span key={s} className="text-xs px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-300">
+                                    {s}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {(task.depends_on || []).length > 0 && (
+                              <p className="text-xs text-slate-500 mt-1">
+                                ↳ needs: {task.depends_on.join(', ')}
+                              </p>
+                            )}
                           </div>
-                        )}
-                        {(task.depends_on || []).length > 0 && (
-                          <p className="text-xs text-slate-500 mt-1">
-                            ↳ needs: {task.depends_on.join(', ')}
-                          </p>
-                        )}
+                          {/* Hours column: LLM value + model suggestion */}
+                          <div className="shrink-0 text-right mt-0.5">
+                            <span className="text-xs text-slate-300 font-mono">{llmHours}h</span>
+                            {modelEst && (
+                              <div
+                                className={`text-xs mt-0.5 font-mono flex items-center gap-1 justify-end ${
+                                  diverges ? 'text-amber-400' : 'text-slate-500'
+                                }`}
+                                title="Model estimate (TF-IDF+Ridge, spec §8.6) – suggestion only"
+                              >
+                                <FlaskConical className="h-2.5 w-2.5" />
+                                {modelEst.hours}h
+                              </div>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <span className="shrink-0 text-xs text-slate-400 font-mono mt-0.5">
-                        {task.estimate_hours}h
-                      </span>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
               </div>
             )}
           </div>
@@ -150,6 +183,8 @@ export default function PlanTab({ projectId, isAdmin }) {
   const [draft, setDraft] = useState(null);   // {plan, source}
   const [applyError, setApplyError] = useState('');
   const [applied, setApplied] = useState(false);
+  // M6: model estimates keyed by task title {title -> {story_points, hours}}
+  const [modelEstimates, setModelEstimates] = useState({});
 
   const generateMut = useMutation({
     mutationFn: () => generatePlan(description, teamSize, durationWeeks),
@@ -157,8 +192,31 @@ export default function PlanTab({ projectId, isAdmin }) {
       setDraft(result);
       setApplied(false);
       setApplyError('');
+      setModelEstimates({});  // reset; useEffect below will re-populate
     },
   });
+
+  // Fetch model estimates for each task in the draft plan (M6 spec §8.6).
+  // Runs whenever draft changes. Fire-and-forget: errors are silently ignored
+  // so a missing model doesn't break the Plan tab.
+  useEffect(() => {
+    if (!draft?.plan?.tasks?.length) return;
+    let cancelled = false;
+    const tasks = draft.plan.tasks;
+    Promise.all(
+      tasks.map((t) =>
+        estimateTask(t.title, t.description)
+          .then((est) => ({ title: t.title, est }))
+          .catch(() => null)
+      )
+    ).then((results) => {
+      if (cancelled) return;
+      const map = {};
+      results.forEach((r) => { if (r) map[r.title] = r.est; });
+      setModelEstimates(map);
+    });
+    return () => { cancelled = true; };
+  }, [draft]);
 
   const applyMut = useMutation({
     mutationFn: () => applyPlan(projectId, draft.plan, draft.source),
@@ -280,7 +338,7 @@ export default function PlanTab({ projectId, isAdmin }) {
             </div>
           )}
 
-          <PlanPreview plan={draft.plan} />
+          <PlanPreview plan={draft.plan} modelEstimates={modelEstimates} />
         </div>
       )}
     </div>

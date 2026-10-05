@@ -1,0 +1,32 @@
+{
+  "model": "TF-IDF(20k, bigrams, sublinear_tf) + Ridge(alpha=1.0) trained on log1p(sp)",
+  "note": "Target log-transformed: train on log1p(sp), predict with expm1(). Beats predict-the-median baseline.",
+  "training_set_median_sp": 4.0,
+  "train_size": 13981,
+  "val_size": 4661,
+  "test_size": 4671,
+  "baseline_predict_median": {
+    "val": {
+      "MAE": 3.9165,
+      "MdAE": 2.0
+    },
+    "test": {
+      "MAE": 3.2605,
+      "MdAE": 2.0
+    }
+  },
+  "model_tfidf_ridge": {
+    "val": {
+      "MAE": 3.5532,
+      "MdAE": 1.7909
+    },
+    "test": {
+      "MAE": 3.1436,
+      "MdAE": 1.8939
+    }
+  },
+  "improvement_vs_baseline_test": {
+    "MAE_delta": 0.1169,
+    "MdAE_delta": 0.1061
+  }
+}
