@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M2 ☑ DONE – next is M3 (Tasks, Kanban, dependencies, activity log)
-- **Last session:** 2026-10-05 / Antigravity AI / M2 Projects + Members complete
+- **Current module:** M3 ☑ DONE – next is M4 (LLM planner, generate-plan, apply-plan, fallback)
+- **Last session:** 2026-10-05 / Antigravity AI / M3 Tasks + Kanban + Activity Log complete
 - **Known bugs:** none
-- **Next step:** M3 – Tasks, Kanban drag/drop, dependencies (cycle check), activity log
+- **Next step:** M4 – LLM wrapper (Groq), generate-plan, apply-plan (admin only), fallback plan
 
 ## Module checklist
 
@@ -17,7 +17,7 @@
 | M0     | Repo, backend skeleton, frontend shell    | MUST     | ☑     | Oct 5       |
 | M1     | Auth                                      | MUST     | ☑     | Oct 6       |
 | M2     | Projects, members, skills, capacity       | MUST     | ☑     | Oct 6       |
-| M3     | Tasks, Kanban, dependencies, activity log | MUST     | ☐     | Oct 7       |
+| M3     | Tasks, Kanban, dependencies, activity log | MUST     | ☑     | Oct 7       |
 | M4     | AI planner (LLM + fallback)               | MUST     | ☐     | Oct 8       |
 | M5     | Assignment optimizer + workload           | MUST     | ☐     | Oct 9       |
 | M6     | Estimator model on public data            | MUST     | ☐     | Oct 9       |
@@ -48,6 +48,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-05 | Antigravity AI | M0     | Folder structure, backend venv + requirements.txt, config.py (pydantic-settings), database.py (SQLAlchemy 2.0 sync engine), main.py (CORS, response envelope ok()/err(), global error handler, GET /api/v1/health), .gitignore, .env.example, models.py placeholder, ai/fallback_plan.json; Vite+React+Tailwind v4 frontend with react-query, axios, react-router-dom, lucide-react; HealthPage.jsx calls /health and shows live JSON response    | Tailwind v4 default @theme imported Inter from Google Fonts causing PostCSS ordering error → fixed by using tailwindcss/preflight + tailwindcss/utilities separately and loading Inter via HTML link tag |
 | 2026-10-05 | Antigravity AI | M1     | models.py (User, SQLAlchemy 2.0), schemas.py (Pydantic v2 UserCreate/Login/Update/Out, TokenOut), security.py (bcrypt hash/verify, PyJWT create/decode), deps.py (get_current_user), routers/auth.py (register/login/me/patch-me), main.py updated to lifespan pattern + auth router; frontend: AuthContext (localStorage + /me validation on mount), ProtectedRoute, LoginPage, RegisterPage, DashboardPage placeholder; 18/18 pytest tests pass | Added email-validator dep for Pydantic EmailStr; replaced deprecated on_event with lifespan context manager |
 | 2026-10-05 | Antigravity AI | M2     | models.py: Project + ProjectMember (SQLAlchemy 2.0, cascade, UniqueConstraint); schemas.py: ProjectCreate/Update/Out + MemberAdd/Update/Out; deps.py: get_membership (404 non-members) + require_admin (403); routers/projects.py + routers/members.py (last-admin guard); conftest.py refactored as shared fixture; 40/40 tests; frontend: DashboardPage (project grid + New Project modal), ProjectPage (Overview + Team tabs), CreateProjectModal, AddMemberModal, SkillsEditor slide-out panel, api/projects.js | none |
+| 2026-10-05 | Antigravity AI | M3     | models.py: Task (completed_at, required_skills JSON, sprint_id nullable) + TaskDependency (UniqueConstraint, cascade) + ActivityLog (append-only audit) + Sprint; schemas.py: TaskCreate/Update/Out + DependencyAdd/Out + ActivityLogOut; services/tasks.py: apply_status_change (completed_at rule), write_activity (audit), has_cycle (DFS O(V+E)); routers/tasks.py: full CRUD + dep add/remove (cycle-checked) + activity endpoint; routers/projects.py updated with real task_count/done_ratio; 59/59 tests; frontend: KanbanBoard (@dnd-kit, 3 columns, drag persists via PATCH), TaskDrawer (inline edit, deps, completed_at), CreateTaskModal, api/tasks.js; Board tab added to ProjectPage (default) | none |
 
 ## Human checklist (do these yourself, not the AI)
 

@@ -18,7 +18,7 @@ from sqlalchemy import select, func
 
 from app.database import get_db
 from app.deps import get_current_user, get_membership, require_admin
-from app.models import Project, ProjectMember, User
+from app.models import Project, ProjectMember, Task, User
 from app.schemas import ProjectCreate, ProjectOut, ProjectUpdate
 from app.main import ok
 
@@ -40,9 +40,18 @@ def _project_out(project: Project, db: Session) -> dict:
         )
     ).scalar_one()
 
-    # M3+ will populate these; keep 0 for now so the schema is stable
-    task_count = 0
-    done_ratio = 0.0
+    task_count = db.execute(
+        select(func.count(Task.id)).where(Task.project_id == project.id)
+    ).scalar_one()
+
+    done_count = db.execute(
+        select(func.count(Task.id)).where(
+            Task.project_id == project.id,
+            Task.status == "done",
+        )
+    ).scalar_one()
+
+    done_ratio = (done_count / task_count) if task_count > 0 else 0.0
     health_score = None   # M7
 
     return ProjectOut(

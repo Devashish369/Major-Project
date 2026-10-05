@@ -8,6 +8,7 @@ Naming convention:
 
 M1: User schemas + Token schema.
 M2: Project, ProjectMember schemas.
+M3: Task, TaskDependency, ActivityLog schemas.
 """
 
 from datetime import datetime
@@ -161,5 +162,95 @@ class MemberOut(BaseModel):
     on_time_rate: float
     role: str
     capacity_hours_per_week: int
+
+    model_config = {"from_attributes": True}
+
+
+# ── Task ──────────────────────────────────────────────────────────────────────
+
+TaskStatus   = Literal["todo", "in_progress", "done"]
+TaskPriority = Literal["low", "medium", "high", "critical"]
+
+
+class TaskCreate(BaseModel):
+    """Body for POST /projects/{id}/tasks."""
+    title: str = Field(..., min_length=1, max_length=300)
+    description: Optional[str] = Field(None, max_length=5000)
+    status: TaskStatus = "todo"
+    priority: TaskPriority = "medium"
+    estimate_hours: Optional[float] = Field(None, ge=0)
+    assignee_id: Optional[int] = None
+    due_date: Optional[str] = None       # ISO date string
+    required_skills: Optional[list] = None
+    module: Optional[str] = None
+    sprint_id: Optional[int] = None
+
+
+class TaskUpdate(BaseModel):
+    """Body for PATCH /tasks/{id} – all fields optional."""
+    title: Optional[str] = Field(None, min_length=1, max_length=300)
+    description: Optional[str] = Field(None, max_length=5000)
+    status: Optional[TaskStatus] = None
+    priority: Optional[TaskPriority] = None
+    estimate_hours: Optional[float] = Field(None, ge=0)
+    actual_hours: Optional[float] = Field(None, ge=0)
+    assignee_id: Optional[int] = None
+    due_date: Optional[str] = None
+    required_skills: Optional[list] = None
+    module: Optional[str] = None
+    sprint_id: Optional[int] = None
+
+
+class TaskOut(BaseModel):
+    """Task row returned to clients."""
+    id: int
+    project_id: int
+    sprint_id: Optional[int]
+    title: str
+    description: Optional[str]
+    status: str
+    priority: str
+    estimate_hours: Optional[float]
+    actual_hours: Optional[float]
+    assignee_id: Optional[int]
+    due_date: Optional[str]
+    required_skills: Optional[list]
+    completed_at: Optional[datetime]
+    module: Optional[str]
+    created_at: datetime
+    # Populated by router: list of depends_on task IDs
+    dependencies: list[int] = []
+
+    model_config = {"from_attributes": True}
+
+
+# ── Task Dependency ───────────────────────────────────────────────────────────
+
+class DependencyAdd(BaseModel):
+    """Body for POST /tasks/{id}/dependencies."""
+    depends_on_id: int
+
+
+class DependencyOut(BaseModel):
+    """Dependency edge returned to clients."""
+    id: int
+    task_id: int
+    depends_on_id: int
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+# ── Activity Log ──────────────────────────────────────────────────────────────
+
+class ActivityLogOut(BaseModel):
+    """Activity log entry returned to clients."""
+    id: int
+    project_id: int
+    user_id: int
+    task_id: Optional[int]
+    action: str
+    meta: Optional[dict]
+    created_at: datetime
 
     model_config = {"from_attributes": True}

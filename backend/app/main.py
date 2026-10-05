@@ -82,10 +82,12 @@ async def global_exception_handler(request: Request, exc: Exception) -> JSONResp
 from app.routers import auth as auth_router        # noqa: E402
 from app.routers import projects as projects_router  # noqa: E402
 from app.routers import members as members_router    # noqa: E402
+from app.routers import tasks as tasks_router        # noqa: E402
 
 app.include_router(auth_router.router,     prefix="/api/v1")
 app.include_router(projects_router.router, prefix="/api/v1")
 app.include_router(members_router.router,  prefix="/api/v1")
+app.include_router(tasks_router.router,    prefix="/api/v1")
 
 # ── Health endpoint ───────────────────────────────────────────────────────────
 @app.get("/api/v1/health", tags=["health"])

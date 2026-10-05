@@ -1,8 +1,8 @@
 /**
  * pages/ProjectPage.jsx – Project detail page with tabbed interface.
  *
- * M2 adds: Overview tab + Team tab (members, capacity, add/remove member).
- * M3 will add: Board tab (Kanban).
+ * M2 added: Overview tab + Team tab.
+ * M3 added: Board tab (Kanban drag-and-drop with @dnd-kit).
  * M4+ will add: Plan, Analytics, Graph, Decisions tabs.
  */
 import { useState } from 'react';
@@ -10,11 +10,13 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, BarChart2, Users, Loader2, UserPlus, Trash2,
-  Shield, User, Calendar, AlertCircle,
+  Shield, User, Calendar, AlertCircle, LayoutDashboard,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getProject, listMembers, addMember, updateMember, removeMember, deleteProject } from '../api/projects';
+import { listTasks } from '../api/tasks';
 import AddMemberModal from '../components/AddMemberModal';
+import KanbanBoard from '../components/KanbanBoard';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -220,7 +222,7 @@ function OverviewTab({ project }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Overview', 'Team'];
+const TABS = ['Overview', 'Board', 'Team'];
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -228,7 +230,7 @@ export default function ProjectPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const qc = useQueryClient();
-  const [tab, setTab] = useState('Overview');
+  const [tab, setTab] = useState('Board');
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', projectId],
@@ -238,6 +240,12 @@ export default function ProjectPage() {
   const { data: members = [] } = useQuery({
     queryKey: ['members', projectId],
     queryFn: () => listMembers(projectId),
+    enabled: !!project,
+  });
+
+  const { data: tasks = [] } = useQuery({
+    queryKey: ['tasks', projectId],
+    queryFn: () => listTasks(projectId),
     enabled: !!project,
   });
 
@@ -311,6 +319,7 @@ export default function ProjectPage() {
               }`}
             >
               {t === 'Team' && <Users className="h-3.5 w-3.5 inline mr-1.5" />}
+              {t === 'Board' && <LayoutDashboard className="h-3.5 w-3.5 inline mr-1.5" />}
               {t}
             </button>
           ))}
@@ -318,8 +327,11 @@ export default function ProjectPage() {
       </div>
 
       {/* Content */}
-      <main className="max-w-4xl mx-auto px-6 py-6">
+      <main className={`mx-auto px-6 py-6 ${tab === 'Board' ? 'max-w-7xl' : 'max-w-4xl'}`}>
         {tab === 'Overview' && project && <OverviewTab project={project} />}
+        {tab === 'Board' && (
+          <KanbanBoard tasks={tasks} projectId={projectId} />
+        )}
         {tab === 'Team' && (
           <TeamTab projectId={projectId} isAdmin={isAdmin} currentUserId={user?.id} />
         )}
