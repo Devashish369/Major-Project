@@ -1,14 +1,13 @@
 # Where the product differs from PROJECT_SPEC.md
 
 Use this list when you update the deck and report so they describe what was actually built.
-Checked against the code and tests on 2026-10-06 (197 tests passing).
+Checked against the code and tests on 2026-10-06 (211 tests passing).
 
 ## 1. In the spec but NOT built
 
 | Spec | What exists instead |
 |---|---|
 | §7 Sprints API: `GET/POST /projects/{id}/sprints`, `PATCH/DELETE /sprints/{id}` (and `routers/sprints.py`) | Sprints are created only when an AI plan is applied (`POST /projects/{id}/apply-plan`). There are no sprint endpoints and no sprint screen; the Board does not group by sprint. |
-| §7 Realtime `WS /ws/projects/{id}` and `routers/ws.py` (module **M13**, marked stretch) | Not built. A second browser window must refresh to see changes. |
 | §3 optional sentence-transformers embeddings (GPU optional) | Not used. The estimator is TF-IDF + Ridge only, as M6 required ("do not install sentence-transformers or PyTorch"). |
 | M14 "deployed" | The code, `render.yaml` and the deploy steps are done and the app is verified on PostgreSQL, but the actual Render + Neon deployment is a manual step for you (README → Deployment). |
 
@@ -16,6 +15,7 @@ Checked against the code and tests on 2026-10-06 (197 tests passing).
 
 | Spec | What was built |
 |---|---|
+| §7 Realtime `WS /ws/projects/{id}?token=` (M13, stretch) | Built as specified (JWT + membership check; `task_created` / `task_updated` / `task_deleted` events), plus: a `ping`/`pong` keep-alive, a cap of 50 sockets per project, events also sent when dependencies change, assignments are applied, or an AI plan is applied. The frontend connects only while the **Board or Graph** tab is open, shows a Live / Reconnecting badge, and reconnects with back-off. Limits: task events only (not decisions or team changes); one server process (in-memory rooms). |
 | §4 `services/qa.py` | The Ask logic is `services/ask.py` (+ `routers/decisions.py` holds both the decision log and `/ask`). |
 | §4 `backend/app/ml/…` | The ML scripts and artifacts are in `backend/ml/` (a leftover empty `backend/app/ml/` package from an early path bug is harmless and can be deleted). `ai/fallback_plan.json` is at `backend/app/ai/`. |
 | §4 routers list | Also has `assignments.py` (recommend/apply/workload). |
@@ -46,5 +46,5 @@ Checked against the code and tests on 2026-10-06 (197 tests passing).
 | Risk classifier (gradient boosting), 4,000 **simulated** snapshots | accuracy 93.4 %, precision 92.1 %, recall 91.2 % | Agreement with the simulator, **not** real-world accuracy. One feature (`remaining_ratio`) carries 83 % of the importance. |
 | NASA93 effort benchmark (gradient boosting), 93 real projects, 5-fold CV | MAE ≈ 308 person-months, R² **0.27 ± 0.63** | Weak and unstable, as expected with 93 heterogeneous projects. Present it as a benchmark of the method. |
 | Forecast | 5,000 Monte Carlo runs, seeded; overrun default log-normal(μ=0.10, σ=0.35), learned from the project if ≥ 10 finished tasks have actual hours | |
-| Tests | 197 pytest tests (SQLite in memory; the suite also passes on PostgreSQL) | |
+| Tests | 211 pytest tests (SQLite in memory; the suite also passes on PostgreSQL) | |
 | Demo data | 12 users, 16 projects, 252 tasks, ~55 dependencies, ~900 activity rows, 28 decisions; 16/16 stories verified | |

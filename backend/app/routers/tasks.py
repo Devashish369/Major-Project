@@ -27,6 +27,7 @@ from app.schemas import (
 )
 from app.services.tasks import apply_status_change, has_cycle, write_activity
 from app.main import ok
+from app.services.realtime import emit_task_deleted, emit_tasks
 
 router = APIRouter(tags=["tasks"])
 
@@ -129,6 +130,7 @@ def create_task(
     )
     db.commit()
     db.refresh(task)
+    emit_tasks(db, project_id, "task_created", [task.id], current_user.id)
     return ok(data=_task_out(task, db), message="Task created.")
 
 
@@ -216,6 +218,7 @@ def update_task(
     )
     db.commit()
     db.refresh(task)
+    emit_tasks(db, task.project_id, "task_updated", [task.id], current_user.id)
     return ok(data=_task_out(task, db), message="Task updated.")
 
 
@@ -245,6 +248,7 @@ def delete_task(
     db.flush()   # flush activity log first, then delete (FK task_id = None)
     db.delete(task)
     db.commit()
+    emit_task_deleted(project_id, task_id, current_user.id)
     return ok(message="Task deleted.")
 
 
@@ -309,6 +313,7 @@ def add_dependency(
     )
     db.commit()
     db.refresh(dep)
+    emit_tasks(db, task.project_id, "task_updated", [task_id], current_user.id)   # its dependency list changed
     return ok(data=DependencyOut.model_validate(dep).model_dump(), message="Dependency added.")
 
 
@@ -346,6 +351,7 @@ def remove_dependency(
         meta={"removed_dep_id": dep_id},
     )
     db.commit()
+    emit_tasks(db, task.project_id, "task_updated", [task_id], current_user.id)
     return ok(message="Dependency removed.")
 
 

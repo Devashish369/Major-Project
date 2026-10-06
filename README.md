@@ -23,6 +23,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Delay risk (ML) | Probability of finishing late with the top contributing factors | Analytics tab |
 | Burndown | Ideal vs actual remaining hours per day | Analytics tab |
 | Dependency graph | One node per task, blocked tasks in red, click to open the task | Graph tab |
+| Live updates | When a teammate creates, edits, moves or deletes a task, your Board and Graph update without a refresh (small "Live" badge; falls back to normal REST if the socket is unavailable) | Board / Graph tabs |
 | Decision log + Ask | Record decisions with reasons; ask questions and get answers that cite their sources | Decisions tab |
 | Benchmarks | Metrics of the estimator, the risk model and the NASA93 effort benchmark | `Benchmarks` button on the dashboard |
 
@@ -35,7 +36,8 @@ Every number the AI layer shows can be traced to a formula or a model described 
  FastAPI app  (backend/app)
    ├─ routers/   thin HTTP layer: auth, projects, members, tasks, ai, assignments, analytics, decisions
    ├─ services/  all logic: planner, llm, assignment, workload, forecast, health, burndown,
-   │             estimator, risk, ask, tasks (status rules, cycle check, audit log)
+   │             estimator, risk, ask, tasks (status rules, cycle check, audit log),
+   │             realtime (WebSocket rooms per project; events published after each commit)
    ├─ models.py  SQLAlchemy 2.0 tables (users, projects, project_members, sprints, tasks,
    │             task_dependencies, activity_log, decisions)
    └─ database.py  one engine; SQLite in development, PostgreSQL in deployment (DATABASE_URL only)
@@ -233,7 +235,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 * **Assignment** assumes tasks are independent and does not model task order or context switching.
 * **Ask has no offline fallback**: without an LLM key, or with `USE_CACHED_PLAN_ONLY=true`, it returns a clear message instead of an answer. Answers are only as good as what was recorded in the tasks and decisions.
 * **No sprint management screens** – sprints are created by applying an AI plan; the API has no sprint endpoints and the Board does not group by sprint.
-* **No real-time updates** (WebSocket module not built): a second browser must refresh to see changes.
+* **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
 * **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
 * **Free hosting**: Render's free tier sleeps when idle (30–60 s wake-up) and Neon's free tier may pause the database.
 
@@ -251,5 +253,6 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 | AI | `POST /ai/generate-plan` · `POST /projects/{id}/apply-plan` · `POST /ai/estimate` · `POST /projects/{id}/assignments/recommend` · `POST /projects/{id}/assignments/apply` · `POST /projects/{id}/ask` |
 | Analytics | `GET /projects/{id}/analytics/health` · `/forecast` · `/workload` · `/burndown` · `GET /ml/effort-benchmark` |
 | Decisions | `GET/POST /projects/{id}/decisions` · `DELETE /decisions/{id}` |
+| Realtime | `WS /ws/projects/{id}?token=<JWT>` (members only) pushes `{type: task_created \| task_updated \| task_deleted, task}`; send the text `ping` to keep it alive |
 
 See [PROGRESS.md](./PROGRESS.md) for the build log, [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 10-minute demo, and [SPEC_DIFFERENCES.md](./SPEC_DIFFERENCES.md) for where the product differs from `PROJECT_SPEC.md`.
