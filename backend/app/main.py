@@ -16,12 +16,20 @@ Response envelope (section 7):
 
 from contextlib import asynccontextmanager
 
+import logging
+
 from fastapi import FastAPI, Request
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.database import engine, Base
+
+
+logger = logging.getLogger(__name__)
 
 
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
@@ -64,16 +72,48 @@ def err(message: str, errors: list = None, status: int = 400):
     )
 
 
-# ── Global error handler ──────────────────────────────────────────────────────
+# ── Error handlers: every error uses the spec §7 envelope ─────────────────────
+# {"success": false, "message": str, "errors": [...]}.  We also keep FastAPI's usual
+# "detail" key so the frontend (which reads response.data.detail) and old clients keep working.
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
+    """401/403/404/409/503 ... raised with HTTPException."""
+    return JSONResponse(
+        status_code=exc.status_code,
+        headers=getattr(exc, "headers", None),
+        content={"success": False, "message": str(exc.detail), "errors": [], "detail": exc.detail},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    """422: the request body / params did not match the schema."""
+    errors = [
+        {"field": ".".join(str(p) for p in e["loc"] if p != "body"), "message": e["msg"]}
+        for e in exc.errors()
+    ]
+    summary = "; ".join(f"{e['field']}: {e['message']}" if e["field"] else e["message"] for e in errors)
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "message": f"Validation failed. {summary}"[:500],
+            "errors": errors,
+            "detail": jsonable_encoder(exc.errors()),
+        },
+    )
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     """
-    Catch any unhandled exception and return it in the standard error envelope.
-    HTTPException is NOT caught here – FastAPI handles it before this handler.
+    Any unhandled exception -> 500.  The real error goes to the server log only;
+    clients get a generic message so internals (SQL, paths) are never leaked.
     """
+    logger.exception("Unhandled error on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=500,
-        content={"success": False, "message": str(exc), "errors": []},
+        content={"success": False, "message": "Internal server error.", "errors": []},
     )
 
 

@@ -156,6 +156,14 @@ export default function DashboardPage() {
         </div>
         <div className="flex items-center gap-3">
           <button
+            id="benchmarks-link"
+            onClick={() => navigate('/benchmarks')}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
+          >
+            <BarChart2 className="h-4 w-4" />
+            Benchmarks
+          </button>
+          <button
             id="skills-editor-btn"
             onClick={() => setShowSkills(true)}
             className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
