@@ -42,13 +42,14 @@ def _make_client(base_url: str, api_key: str) -> OpenAI:
     )
 
 
-def call_llm(prompt: str, *, use_fallback: bool = False) -> str:
+def call_llm(prompt: str, *, use_fallback: bool = False, system: str | None = None) -> str:
     """
     Call an LLM and return the raw text response.
 
     Args:
         prompt:       The user message (schema + description).
         use_fallback: If True, use the fallback provider (Gemini).
+        system:       Optional system prompt (default: the JSON-only planner prompt).
 
     Returns:
         Raw response string (should be JSON).
@@ -71,7 +72,7 @@ def call_llm(prompt: str, *, use_fallback: bool = False) -> str:
     response = client.chat.completions.create(
         model=model,
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system or SYSTEM_PROMPT},
             {"role": "user",   "content": prompt},
         ],
         temperature=0,        # deterministic JSON output

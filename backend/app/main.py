@@ -86,6 +86,7 @@ from app.routers import tasks as tasks_router        # noqa: E402
 from app.routers import ai as ai_router              # noqa: E402
 from app.routers import assignments as assign_router  # noqa: E402
 from app.routers import analytics as analytics_router  # noqa: E402
+from app.routers import decisions as decisions_router  # noqa: E402
 
 app.include_router(auth_router.router,       prefix="/api/v1")
 app.include_router(projects_router.router,   prefix="/api/v1")
@@ -94,6 +95,7 @@ app.include_router(tasks_router.router,      prefix="/api/v1")
 app.include_router(ai_router.router,         prefix="/api/v1")
 app.include_router(assign_router.router,     prefix="/api/v1")
 app.include_router(analytics_router.router,  prefix="/api/v1")
+app.include_router(decisions_router.router,  prefix="/api/v1")
 
 # ── Health endpoint ───────────────────────────────────────────────────────────
 @app.get("/api/v1/health", tags=["health"])

@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M11 ☑ DONE – next is M12 (Decision log + Ask)
-- **Last session:** 2026-10-06 / Claude Code / M11 Dependency graph tab
+- **Current module:** M12 ☑ DONE – next is M13 (WebSocket live updates, STRETCH)
+- **Last session:** 2026-10-06 / Claude Code / M12 Decision log + Ask
 - **Known bugs:** none
-- **Next step:** M12 – decisions CRUD, POST /projects/{id}/ask (mocked-LLM tests), Decisions tab
+- **Next step:** M13 – WS /ws/projects/{id}?token= (JWT + membership), broadcast task events, frontend hook with reconnect (optional stretch; M14 deploy/freeze is the priority)
 - **Rebuild demo data (one command, from `backend/`):** `python -m seed.seed_demo --verify`  → login `demo@intellipm.demo` / `Demo@1234` (add `--attach your@email` to also add your own account)
 
 ## Module checklist
@@ -27,7 +27,7 @@
 | M9     | Dashboard + analytics charts              | MUST     | ☑     | Oct 11      |
 | M10    | 16 demo projects seeded                   | MUST     | ☑     | Oct 12      |
 | M11    | Dependency graph                          | SHOULD   | ☑     | Oct 12      |
-| M12    | Decision log + Ask                        | SHOULD   | ☐     | Oct 13      |
+| M12    | Decision log + Ask                        | SHOULD   | ☑     | Oct 13      |
 | M13    | WebSocket live updates                    | STRETCH  | ☐     | Oct 13      |
 | M14    | Postgres switch, deploy, freeze           | FINAL    | ☐     | Oct 14      |
 | M15    | Tests, README, report, deck               | FINAL    | ☐     | Oct 15      |
@@ -58,6 +58,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-06 | Claude Code | M9 | services/burndown.py (ideal = straight line total_hours→0 over start..due; actual = total − estimate of tasks with completed_at ≤ day, null after today); GET /projects/{id}/analytics/burndown (member-only, thin router); frontend: api/analytics.js, AnalyticsTab.jsx (recharts: health score + 4 penalty bars, ML delay-risk % + top factors, forecast histogram with P50/P80/P90 + due-date reference lines, burndown line chart, workload bars), every card has loading/empty/error(+Retry) states; Analytics tab in ProjectPage; Dashboard cards show Low/Medium/High risk badge from health_score; 173/173 tests (4 new burndown tests) | Fixed benchmarks.js importing nonexistent './axios' (build was broken). Risk card shows empty state when project has no tasks (model gave 98% for empty project). Cards treat pending/paused queries as loading. |
 | 2026-10-06 | Claude Code | M10 | seed/demo_projects.py (12 users with distinct skills/on-time rates, 16 projects of 9-30 tasks each: estimates, dependencies, decisions, per-story tuning knobs); seed/seed_demo.py (idempotent: wipes only @intellipm.demo users + their projects; fixed RNG seed; all dates relative to today; each project's due date = today + slack × its own Monte Carlo P50 and start date set from the intended slip, so stories stay true on any day; actual_hours on ~90% of finished tasks; activity history incl. scope-creep estimate changes; 252 tasks, 58 deps, ~900 activity rows, 28 decisions); seed/verify_demo.py (calls the real health/forecast APIs and prints designed vs actual level + delay band; exit 1 on mismatch); Decision model added to models.py (table only, CRUD is M12); 176 tests (3 new data-definition tests) | Presenter account demo@intellipm.demo is admin of all 16 projects with 10 h/week capacity (it contributes slightly to capacity and shows as 'available'). First run had 12/16 stories right; fixed by raising slip/overdue and by sizing the done set for expected overrun. |
 | 2026-10-06 | Claude Code | M11 | components/GraphTab.jsx (@xyflow/react): one node per task, edges prerequisite→dependent, node colour by status, blocked (open task with an unfinished dependency) red with animated red edges, layered layout (column = dependency depth, longest path), legend + blocked count, click node opens the existing TaskDrawer, empty state; Graph tab in ProjectPage; no backend change (task payload already has `dependencies`). Checked on seeded IoT Dashboard: 16 nodes, 14 edges, 7 red nodes = 7 blocked computed from the API; click opens correct task | Fixed a real bug since M0: index.css never imported tailwindcss/theme, so every theme-based class (bg-slate-*, px-*, text-*) generated no CSS and the whole app looked unstyled; added `@import "tailwindcss/theme"`. Nodes given explicit width/height so React Flow renders without waiting for measurement. No frontend test runner is configured, so no automated test for the layout function. |
+| 2026-10-06 | Claude Code | M12 | routers/decisions.py (GET/POST /projects/{id}/decisions any member; DELETE /decisions/{id} author or admin; POST /projects/{id}/ask; non-members 404); services/ask.py (context = decisions + tasks + last 50 activity rows as id-tagged lines [D3] [T12] [A45], truncated to 12,000 chars with decisions kept first; strict system prompt: answer only from context, cite tags, exact not-found sentence; provider order primary → fallback only if its key is set; citations validated against ids actually in the context; USE_CACHED_PLAN_ONLY or no key or all providers failing → clear 503 message, never a crash); llm.call_llm gained optional `system` arg; schemas DecisionCreate/DecisionOut/AskRequest; frontend DecisionsTab (Ask box with answer + source chips, decision log, add form, delete, loading/empty/error states) + api/decisions.js; 193 tests (17 new, LLM always mocked). Exercised live on Event Booking System with Groq: seat-hold question → cites D21 correctly; refund question → right author + decision; off-topic question → not-found sentence, no sources; UI add-decision + ask verified | Ask has no cached answer (unlike the planner), so with USE_CACHED_PLAN_ONLY=true it returns a 503 explaining that. Re-ran seed after the UI test to remove the test decision. |
 
 ## Human checklist (do these yourself, not the AI)
 
