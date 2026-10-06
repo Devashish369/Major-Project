@@ -78,6 +78,17 @@ MajorProject/
 
 Prerequisites: Python 3.13 (3.11+ works for development), Node 20.19+ (22 recommended).
 
+### Quickest: one command for both servers
+
+After the one-time setup below (backend venv + `pip install -r requirements.txt`, and `backend/.env`), run from the repo root:
+
+```bash
+python dev.py            # backend http://localhost:8000  +  frontend http://localhost:5173  (Ctrl+C stops both)
+python dev.py --seed     # same, but rebuilds the demo data first
+```
+
+(`npm install` in `frontend/` is run for you the first time.) The two steps below are the same thing done by hand.
+
 ### 1. Backend
 
 ```bash
