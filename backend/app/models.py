@@ -252,3 +252,29 @@ class Sprint(Base):
     start_date: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     end_date: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     goal: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+
+# ── Decisions (table added in M10 so the demo seed can fill it; CRUD is M12) ──
+class Decision(Base):
+    """
+    decisions table – a project's decision log (spec §6).
+    related_task_id is optional; made_by is the user who recorded it.
+    """
+    __tablename__ = "decisions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    project_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("projects.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    title: Mapped[str] = mapped_column(String, nullable=False)
+    decision: Mapped[str] = mapped_column(String, nullable=False)
+    reason: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    made_by: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
+    )
+    related_task_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
+    )
