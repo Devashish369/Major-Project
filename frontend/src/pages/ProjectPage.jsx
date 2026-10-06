@@ -24,6 +24,7 @@ import PlanTab from '../components/PlanTab';
 import AnalyticsTab from '../components/AnalyticsTab';
 import GraphTab from '../components/GraphTab';
 import DecisionsTab from '../components/DecisionsTab';
+import useProjectSocket from '../hooks/useProjectSocket';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -413,6 +414,25 @@ function OverviewTab({ project }) {
   );
 }
 
+// ── Live-updates badge (M13) ──────────────────────────────────────────────────
+const LIVE_STYLE = {
+  live:         ['bg-green-400',  'text-green-400',  'Live'],
+  connecting:   ['bg-amber-400',  'text-amber-400',  'Connecting…'],
+  reconnecting: ['bg-amber-400',  'text-amber-400',  'Reconnecting…'],
+  offline:      ['bg-slate-500',  'text-slate-400',  "Offline – refresh to see others' changes"],
+};
+
+function LiveBadge({ status }) {
+  const style = LIVE_STYLE[status];
+  if (!style) return null;
+  return (
+    <span id="live-badge" data-status={status} className={`ml-auto self-center flex items-center gap-1.5 text-xs ${style[1]}`}>
+      <span className={`h-2 w-2 rounded-full ${style[0]} ${status === 'live' ? '' : 'animate-pulse'}`} />
+      {style[2]}
+    </span>
+  );
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics', 'Graph', 'Decisions'];
@@ -424,6 +444,8 @@ export default function ProjectPage() {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [tab, setTab] = useState('Board');
+  // Live updates only while a tab that shows tasks is open (spec: connect when the Board opens)
+  const liveStatus = useProjectSocket(projectId, tab === 'Board' || tab === 'Graph');
 
   const { data: project, isLoading, error } = useQuery({
     queryKey: ['project', projectId],
@@ -516,6 +538,7 @@ export default function ProjectPage() {
               {t}
             </button>
           ))}
+          {(tab === 'Board' || tab === 'Graph') && <LiveBadge status={liveStatus} />}
         </nav>
       </div>
 

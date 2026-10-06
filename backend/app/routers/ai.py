@@ -24,6 +24,7 @@ from app.models import ActivityLog, Project, ProjectMember, Sprint, Task, TaskDe
 from app.schemas import GeneratePlanRequest, ApplyPlanRequest, EstimateRequest
 from app.services.planner import generate_plan
 from app.services.tasks import write_activity
+from app.services.realtime import emit_tasks
 from app.services.estimator import estimate as _estimate_sp
 from app.main import ok
 
@@ -158,6 +159,7 @@ def apply_plan(
     )
 
     db.commit()
+    emit_tasks(db, project_id, "task_created", list(task_title_to_id.values()), current_user.id)
 
     return ok(
         data={

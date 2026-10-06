@@ -29,6 +29,7 @@ from app.schemas import AssignmentRecommendRequest, AssignmentApplyRequest
 from app.services.assignment import MemberInfo, TaskInfo, recommend_assignments
 from app.services.workload import compute_workload
 from app.services.tasks import write_activity
+from app.services.realtime import emit_tasks
 from app.main import ok
 
 logger = logging.getLogger(__name__)
@@ -176,6 +177,7 @@ def apply_assignments(
     Runs in one transaction.
     """
     applied = 0
+    changed_ids: list[int] = []
     for assignment in body.assignments:
         task = db.execute(
             select(Task).where(
@@ -199,6 +201,7 @@ def apply_assignments(
             continue  # skip non-member assignments silently
 
         task.assignee_id = assignment["user_id"]
+        changed_ids.append(task.id)
         write_activity(
             db,
             project_id=project_id,
@@ -210,6 +213,7 @@ def apply_assignments(
         applied += 1
 
     db.commit()
+    emit_tasks(db, project_id, "task_updated", changed_ids, current_user.id)
 
     return ok(
         data={"applied": applied},
