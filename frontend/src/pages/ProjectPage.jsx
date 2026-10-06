@@ -21,6 +21,7 @@ import { recommendAssignments, applyAssignments, getWorkload } from '../api/assi
 import AddMemberModal from '../components/AddMemberModal';
 import KanbanBoard from '../components/KanbanBoard';
 import PlanTab from '../components/PlanTab';
+import AnalyticsTab from '../components/AnalyticsTab';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -392,7 +393,7 @@ function OverviewTab({ project }) {
         ['Members', project.member_count],
         ['Tasks', project.task_count],
         ['Done', `${Math.round((project.done_ratio || 0) * 100)}%`],
-        ['Health', project.health_score !== null ? Math.round(project.health_score) : 'TBD (M7)'],
+        ['Health', project.health_score != null ? Math.round(project.health_score) : '—'],
       ].map(([label, value]) => (
         <div key={label} className="rounded-lg border border-slate-700 bg-slate-800 p-4">
           <p className="text-xs text-slate-400 mb-1">{label}</p>
@@ -412,7 +413,7 @@ function OverviewTab({ project }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Overview', 'Board', 'Plan', 'Team'];
+const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics'];
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -517,7 +518,7 @@ export default function ProjectPage() {
       </div>
 
       {/* Content */}
-      <main className={`mx-auto px-6 py-6 ${tab === 'Board' ? 'max-w-7xl' : 'max-w-4xl'}`}>
+      <main className={`mx-auto px-6 py-6 ${tab === 'Board' || tab === 'Analytics' ? 'max-w-7xl' : 'max-w-4xl'}`}>
         {tab === 'Overview' && project && <OverviewTab project={project} />}
         {tab === 'Board' && (
           <KanbanBoard tasks={tasks} projectId={projectId} />
@@ -525,6 +526,7 @@ export default function ProjectPage() {
         {tab === 'Plan' && (
           <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}
+        {tab === 'Analytics' && <AnalyticsTab projectId={projectId} dueDate={project?.due_date} />}
         {tab === 'Team' && (
           <TeamTab projectId={projectId} isAdmin={isAdmin} currentUserId={user?.id} />
         )}

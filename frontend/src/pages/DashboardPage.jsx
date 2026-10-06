@@ -99,17 +99,20 @@ function ProjectCard({ project, onClick }) {
         )}
       </div>
 
-      {/* Health score (M7+) */}
-      {project.health_score !== null && project.health_score !== undefined && (
-        <div className="mt-3 pt-3 border-t border-slate-700">
-          <span className={`text-xs font-medium ${
-            project.health_score >= 75 ? 'text-green-400' :
-            project.health_score >= 50 ? 'text-amber-400' : 'text-red-400'
-          }`}>
-            ● Health: {Math.round(project.health_score)}
-          </span>
-        </div>
-      )}
+      {/* Health badge: >=75 low risk, 50-74 medium, <50 high (spec 8.5) */}
+      {project.health_score != null && (() => {
+        const h = project.health_score;
+        const [text, cls] =
+          h >= 75 ? ['Low risk', 'text-green-400 bg-green-500/10 border-green-500/30']
+          : h >= 50 ? ['Medium risk', 'text-amber-400 bg-amber-500/10 border-amber-500/30']
+          : ['High risk', 'text-red-400 bg-red-500/10 border-red-500/30'];
+        return (
+          <div className="mt-3 pt-3 border-t border-slate-700 flex items-center justify-between">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${cls}`}>● {text}</span>
+            <span className="text-xs text-slate-400">Health {Math.round(h)}</span>
+          </div>
+        );
+      })()}
     </div>
   );
 }
