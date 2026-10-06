@@ -12,17 +12,16 @@ from app.config import settings
 
 
 # ── Engine ────────────────────────────────────────────────────────────────────
-# connect_args is SQLite-specific: allows the same connection to be used
-# across threads (needed because FastAPI runs in a thread pool).
-connect_args = {}
-if settings.DATABASE_URL.startswith("sqlite"):
-    connect_args["check_same_thread"] = False
+# SQLite needs check_same_thread=False (FastAPI uses a thread pool).
+# PostgreSQL gets pool_pre_ping so a connection that the host closed while the
+# service was idle (Neon / Render free tier do this) is replaced instead of failing.
+engine_kwargs = {"echo": False}   # set echo=True to debug SQL
+if settings.is_sqlite:
+    engine_kwargs["connect_args"] = {"check_same_thread": False}
+else:
+    engine_kwargs.update(pool_pre_ping=True, pool_recycle=300)
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args=connect_args,
-    echo=False,   # set True to debug SQL; keep False in production
-)
+engine = create_engine(settings.database_url, **engine_kwargs)
 
 # ── Session factory ───────────────────────────────────────────────────────────
 SessionLocal = sessionmaker(

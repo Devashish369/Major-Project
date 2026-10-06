@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M12 ☑ DONE – next is M13 (WebSocket live updates, STRETCH)
-- **Last session:** 2026-10-06 / Claude Code / M12 Decision log + Ask
+- **Current module:** M14 ◐ code + docs DONE, actual Render/Neon deploy is a HUMAN step (see README 'Deployment'); FEATURE FREEZE is on. Next: M15 (tests, README, DEMO_SCRIPT.md). M13 (stretch) skipped for now.
+- **Last session:** 2026-10-06 / Claude Code / M14 Postgres switch + deploy prep
 - **Known bugs:** none
-- **Next step:** M13 – WS /ws/projects/{id}?token= (JWT + membership), broadcast task events, frontend hook with reconnect (optional stretch; M14 deploy/freeze is the priority)
+- **Next step:** (human) follow README 'Deployment' A-E, then M15. M13 WebSocket only if time remains AFTER M15 (it would break the feature freeze).
 - **Rebuild demo data (one command, from `backend/`):** `python -m seed.seed_demo --verify`  → login `demo@intellipm.demo` / `Demo@1234` (add `--attach your@email` to also add your own account)
 
 ## Module checklist
@@ -29,7 +29,7 @@
 | M11    | Dependency graph                          | SHOULD   | ☑     | Oct 12      |
 | M12    | Decision log + Ask                        | SHOULD   | ☑     | Oct 13      |
 | M13    | WebSocket live updates                    | STRETCH  | ☐     | Oct 13      |
-| M14    | Postgres switch, deploy, freeze           | FINAL    | ☐     | Oct 14      |
+| M14    | Postgres switch, deploy, freeze           | FINAL    | ◐ (Postgres ☑, deploy = human) | Oct 14      |
 | M15    | Tests, README, report, deck               | FINAL    | ☐     | Oct 15      |
 | —     | Rehearsal only, no new features           | —       | ☐     | Oct 16–17  |
 
@@ -59,6 +59,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-06 | Claude Code | M10 | seed/demo_projects.py (12 users with distinct skills/on-time rates, 16 projects of 9-30 tasks each: estimates, dependencies, decisions, per-story tuning knobs); seed/seed_demo.py (idempotent: wipes only @intellipm.demo users + their projects; fixed RNG seed; all dates relative to today; each project's due date = today + slack × its own Monte Carlo P50 and start date set from the intended slip, so stories stay true on any day; actual_hours on ~90% of finished tasks; activity history incl. scope-creep estimate changes; 252 tasks, 58 deps, ~900 activity rows, 28 decisions); seed/verify_demo.py (calls the real health/forecast APIs and prints designed vs actual level + delay band; exit 1 on mismatch); Decision model added to models.py (table only, CRUD is M12); 176 tests (3 new data-definition tests) | Presenter account demo@intellipm.demo is admin of all 16 projects with 10 h/week capacity (it contributes slightly to capacity and shows as 'available'). First run had 12/16 stories right; fixed by raising slip/overdue and by sizing the done set for expected overrun. |
 | 2026-10-06 | Claude Code | M11 | components/GraphTab.jsx (@xyflow/react): one node per task, edges prerequisite→dependent, node colour by status, blocked (open task with an unfinished dependency) red with animated red edges, layered layout (column = dependency depth, longest path), legend + blocked count, click node opens the existing TaskDrawer, empty state; Graph tab in ProjectPage; no backend change (task payload already has `dependencies`). Checked on seeded IoT Dashboard: 16 nodes, 14 edges, 7 red nodes = 7 blocked computed from the API; click opens correct task | Fixed a real bug since M0: index.css never imported tailwindcss/theme, so every theme-based class (bg-slate-*, px-*, text-*) generated no CSS and the whole app looked unstyled; added `@import "tailwindcss/theme"`. Nodes given explicit width/height so React Flow renders without waiting for measurement. No frontend test runner is configured, so no automated test for the layout function. |
 | 2026-10-06 | Claude Code | M12 | routers/decisions.py (GET/POST /projects/{id}/decisions any member; DELETE /decisions/{id} author or admin; POST /projects/{id}/ask; non-members 404); services/ask.py (context = decisions + tasks + last 50 activity rows as id-tagged lines [D3] [T12] [A45], truncated to 12,000 chars with decisions kept first; strict system prompt: answer only from context, cite tags, exact not-found sentence; provider order primary → fallback only if its key is set; citations validated against ids actually in the context; USE_CACHED_PLAN_ONLY or no key or all providers failing → clear 503 message, never a crash); llm.call_llm gained optional `system` arg; schemas DecisionCreate/DecisionOut/AskRequest; frontend DecisionsTab (Ask box with answer + source chips, decision log, add form, delete, loading/empty/error states) + api/decisions.js; 193 tests (17 new, LLM always mocked). Exercised live on Event Booking System with Groq: seat-hold question → cites D21 correctly; refund question → right author + decision; off-topic question → not-found sentence, no sources; UI add-decision + ask verified | Ask has no cached answer (unlike the planner), so with USE_CACHED_PLAN_ONLY=true it returns a 503 explaining that. Re-ran seed after the UI test to remove the test decision. |
+| 2026-10-06 | Claude Code | M14 | FEATURE FREEZE (no features added). Only DATABASE_URL changes between SQLite and Postgres: config.database_url normalises postgres:// and postgresql:// to postgresql+psycopg://; database.py adds pool_pre_ping/pool_recycle for Postgres (SQLite keeps check_same_thread); psycopg[binary] added; start-up refuses the default SECRET_KEY on a non-SQLite DB. ML libs in requirements.txt pinned to the versions that built the committed .joblib files (scikit-learn 1.9.1 etc.). tests/conftest.py honours TEST_DATABASE_URL. render.yaml Blueprint (API web service on $PORT + static site with SPA rewrite), backend/.env.example + frontend/.env.example updated, README rewritten with local run + env table + Render/Neon step-by-step + troubleshooting. Verified on a real local PostgreSQL (embedded, throwaway): all 193 tests pass on SQLite AND on Postgres; app boots, 16 demo projects seeded with 16/16 stories OK using a postgres:// URL; seed output identical on both DBs; login, analytics, tasks, decisions, recommend, write+delete paths return 200; fresh venv install from requirements.txt works, models load with warnings-as-errors, suite passes (193) | No SQLite-only assumptions found in the code. NOT done (needs the user's accounts): creating Neon DB, Render services, setting env vars, seeding Neon, rehearsal. Render PYTHON_VERSION is pinned to 3.13.13 in render.yaml; if Render rejects it use 3.13. Free Render sleeps after ~15 min idle (30-60 s wake-up). |
 
 ## Human checklist (do these yourself, not the AI)
 
@@ -68,6 +69,7 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 - [ ] Commit after every working module (`git commit -m "M3: kanban + dependencies"`)
 - [ ] Oct 14: Opus review with the checklist below, then fix only real bugs
 - [ ] Update the deck/synopsis to match what was actually built
+- [ ] M14 deploy: Neon project + connection string; Render Blueprint from render.yaml; set DATABASE_URL, CORS_ORIGINS, LLM keys, VITE_API_BASE_URL; seed Neon with `python -m seed.seed_demo --verify`; open /api/v1/health to warm up before the demo (README 'Deployment' A-E)
 
 ## Prompt to start / resume ANY session (paste this)
 
