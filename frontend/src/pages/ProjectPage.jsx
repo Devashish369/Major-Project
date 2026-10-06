@@ -22,6 +22,7 @@ import AddMemberModal from '../components/AddMemberModal';
 import KanbanBoard from '../components/KanbanBoard';
 import PlanTab from '../components/PlanTab';
 import AnalyticsTab from '../components/AnalyticsTab';
+import GraphTab from '../components/GraphTab';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -413,7 +414,7 @@ function OverviewTab({ project }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics'];
+const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics', 'Graph'];
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -518,7 +519,7 @@ export default function ProjectPage() {
       </div>
 
       {/* Content */}
-      <main className={`mx-auto px-6 py-6 ${tab === 'Board' || tab === 'Analytics' ? 'max-w-7xl' : 'max-w-4xl'}`}>
+      <main className={`mx-auto px-6 py-6 ${['Board', 'Analytics', 'Graph'].includes(tab) ? 'max-w-7xl' : 'max-w-4xl'}`}>
         {tab === 'Overview' && project && <OverviewTab project={project} />}
         {tab === 'Board' && (
           <KanbanBoard tasks={tasks} projectId={projectId} />
@@ -526,6 +527,7 @@ export default function ProjectPage() {
         {tab === 'Plan' && (
           <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}
+        {tab === 'Graph' && <GraphTab tasks={tasks} projectId={projectId} />}
         {tab === 'Analytics' && <AnalyticsTab projectId={projectId} dueDate={project?.due_date} />}
         {tab === 'Team' && (
           <TeamTab projectId={projectId} isAdmin={isAdmin} currentUserId={user?.id} />
