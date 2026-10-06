@@ -27,13 +27,23 @@ from app.main import app
 from app.database import Base, get_db
 
 # ── Single shared in-memory SQLite engine ─────────────────────────────────────
-TEST_DATABASE_URL = "sqlite:///:memory:"
+# Default: private in-memory SQLite.  To run the whole suite on PostgreSQL instead:
+#   TEST_DATABASE_URL=postgresql://user:pass@host:5432/testdb pytest      (database is wiped per test!)
+import os
 
-engine_test = create_engine(
-    TEST_DATABASE_URL,
-    connect_args={"check_same_thread": False},
-    poolclass=StaticPool,   # same connection across threads (required for SQLite :memory:)
-)
+TEST_DATABASE_URL = os.environ.get("TEST_DATABASE_URL", "sqlite:///:memory:")
+
+if TEST_DATABASE_URL.startswith("sqlite"):
+    engine_test = create_engine(
+        TEST_DATABASE_URL,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,   # same connection across threads (required for SQLite :memory:)
+    )
+else:
+    for _prefix in ("postgres://", "postgresql://"):
+        if TEST_DATABASE_URL.startswith(_prefix):
+            TEST_DATABASE_URL = "postgresql+psycopg://" + TEST_DATABASE_URL[len(_prefix):]
+    engine_test = create_engine(TEST_DATABASE_URL, pool_pre_ping=True)
 TestingSessionLocal = sessionmaker(bind=engine_test, autocommit=False, autoflush=False)
 
 

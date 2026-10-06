@@ -1,0 +1,54 @@
+# Render Blueprint (New + -> Blueprint -> pick this repo).  No Docker needed.
+# Secrets are NOT stored here: values marked `sync: false` are typed into the Render dashboard.
+services:
+  # ── Backend: FastAPI ──────────────────────────────────────────────────────
+  - type: web
+    name: intellipm-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: PYTHON_VERSION          # must match the version the ML artifacts were built with
+        value: 3.13.13
+      - key: DATABASE_URL            # Neon / Supabase / Render Postgres connection string
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: CORS_ORIGINS            # the frontend URL, e.g. https://intellipm-web.onrender.com
+        sync: false
+      - key: LLM_API_KEY
+        sync: false
+      - key: LLM_FALLBACK_API_KEY
+        sync: false
+      - key: LLM_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: LLM_MODEL
+        value: openai/gpt-oss-120b
+      - key: LLM_FALLBACK_BASE_URL
+        value: https://generativelanguage.googleapis.com/v1beta/openai/
+      - key: LLM_FALLBACK_MODEL
+        value: gemini-flash-latest
+      - key: USE_CACHED_PLAN_ONLY
+        value: "false"
+      - key: HOURS_PER_STORY_POINT
+        value: "3"
+
+  # ── Frontend: static React build ──────────────────────────────────────────
+  - type: web
+    name: intellipm-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: VITE_API_BASE_URL       # https://<intellipm-api URL>/api/v1  (set after the API exists)
+        sync: false
+    routes:
+      - type: rewrite                # React Router: every path serves index.html
+        source: /*
+        destination: /index.html

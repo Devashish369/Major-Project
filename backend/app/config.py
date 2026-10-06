@@ -45,6 +45,26 @@ class Settings(BaseSettings):
     )
 
     @property
+    def database_url(self) -> str:
+        """
+        DATABASE_URL in the form SQLAlchemy + psycopg 3 needs.
+
+        Hosts (Render, Neon, Supabase) hand out `postgres://...` or `postgresql://...`;
+        SQLAlchemy would pick the old psycopg2 driver for those, so we name psycopg 3
+        explicitly.  SQLite URLs are returned unchanged.  This is the ONLY thing that
+        differs between development and deployment: you change DATABASE_URL, nothing else.
+        """
+        url = self.DATABASE_URL.strip()
+        for prefix in ("postgres://", "postgresql://"):
+            if url.startswith(prefix):
+                return "postgresql+psycopg://" + url[len(prefix):]
+        return url
+
+    @property
+    def is_sqlite(self) -> bool:
+        return self.database_url.startswith("sqlite")
+
+    @property
     def cors_origins_list(self) -> list[str]:
         """Split the comma-separated CORS_ORIGINS string into a Python list."""
         return [o.strip() for o in self.CORS_ORIGINS.split(",") if o.strip()]
@@ -52,3 +72,11 @@ class Settings(BaseSettings):
 
 # Single shared instance imported everywhere else.
 settings = Settings()
+
+# Fail fast: a deployed (non-SQLite) database must never run with the public default secret,
+# because anyone could then forge login tokens.
+if not settings.is_sqlite and settings.SECRET_KEY.startswith(("change-me", "CHANGE_ME")):
+    raise RuntimeError(
+        "SECRET_KEY is still the default. Set a long random SECRET_KEY "
+        "(e.g. `python -c \"import secrets; print(secrets.token_hex(32))\"`) before using PostgreSQL."
+    )
