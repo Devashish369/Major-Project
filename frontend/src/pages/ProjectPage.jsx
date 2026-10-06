@@ -23,6 +23,7 @@ import KanbanBoard from '../components/KanbanBoard';
 import PlanTab from '../components/PlanTab';
 import AnalyticsTab from '../components/AnalyticsTab';
 import GraphTab from '../components/GraphTab';
+import DecisionsTab from '../components/DecisionsTab';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -414,7 +415,7 @@ function OverviewTab({ project }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics', 'Graph'];
+const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics', 'Graph', 'Decisions'];
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -528,6 +529,9 @@ export default function ProjectPage() {
           <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}
         {tab === 'Graph' && <GraphTab tasks={tasks} projectId={projectId} />}
+        {tab === 'Decisions' && (
+          <DecisionsTab projectId={projectId} tasks={tasks} isAdmin={isAdmin} currentUserId={user?.id} />
+        )}
         {tab === 'Analytics' && <AnalyticsTab projectId={projectId} dueDate={project?.due_date} />}
         {tab === 'Team' && (
           <TeamTab projectId={projectId} isAdmin={isAdmin} currentUserId={user?.id} />

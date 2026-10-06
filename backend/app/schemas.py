@@ -289,3 +289,33 @@ class EstimateRequest(BaseModel):
     """Body for POST /ai/estimate (spec §8.6)."""
     title: str = Field(..., min_length=1, max_length=500)
     description: Optional[str] = Field(default=None, max_length=10000)
+
+
+# ── Decisions + Ask (M12) ─────────────────────────────────────────────────────
+
+class DecisionCreate(BaseModel):
+    """Body for POST /projects/{id}/decisions."""
+    title: str = Field(min_length=1, max_length=200)
+    decision: str = Field(min_length=1, max_length=2000)
+    reason: Optional[str] = Field(default=None, max_length=2000)
+    related_task_id: Optional[int] = None
+
+
+class DecisionOut(BaseModel):
+    """Decision log entry returned to clients."""
+    id: int
+    project_id: int
+    title: str
+    decision: str
+    reason: Optional[str]
+    made_by: Optional[int]
+    made_by_name: Optional[str] = None
+    related_task_id: Optional[int]
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class AskRequest(BaseModel):
+    """Body for POST /projects/{id}/ask."""
+    question: str = Field(min_length=3, max_length=500)
