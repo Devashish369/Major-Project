@@ -1,7 +1,7 @@
 /**
  * api/benchmarks.js – Frontend API helper for the Benchmarks page (M8).
  */
-import api from './axios';
+import api from './client';
 
 /**
  * GET /ml/effort-benchmark

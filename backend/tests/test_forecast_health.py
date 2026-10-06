@@ -439,3 +439,46 @@ class TestHealthEndpoint:
                        headers=auth(tok))
         score = r.json()["data"]["health_score"]
         assert 0.0 <= score <= 100.0
+
+
+# ── M9: burndown ──────────────────────────────────────────────────────────────
+
+class TestBurndown:
+    def test_ideal_line_and_actual_drop(self):
+        from datetime import datetime
+        from app.services.burndown import compute_burndown
+        today = date(2026, 10, 10)
+        tasks = [
+            {"estimate_hours": 10, "completed_at": datetime(2026, 10, 8, 12), "created_at": datetime(2026, 10, 1)},
+            {"estimate_hours": 10, "completed_at": None, "created_at": datetime(2026, 10, 1)},
+        ]
+        r = compute_burndown("2026-10-05", "2026-10-15", tasks, today=today)
+        pts = {p["date"]: p for p in r["points"]}
+        assert r["total_hours"] == 20
+        assert pts["2026-10-05"]["ideal"] == 20 and pts["2026-10-15"]["ideal"] == 0
+        assert pts["2026-10-07"]["actual"] == 20
+        assert pts["2026-10-08"]["actual"] == 10
+        assert pts["2026-10-10"]["actual"] == 10
+        assert pts["2026-10-11"]["actual"] is None   # future
+
+    def test_no_tasks_is_empty(self):
+        from app.services.burndown import compute_burndown
+        assert compute_burndown(None, None, [])["points"] == []
+
+    def test_endpoint(self, client):
+        tok = register_and_token(client, "bd1")
+        pid = make_project(client, tok)
+        r = client.get(f"/api/v1/projects/{pid}/analytics/burndown", headers=auth(tok))
+        assert r.status_code == 200 and r.json()["data"]["points"] == []
+        client.post(f"/api/v1/projects/{pid}/tasks",
+                    json={"title": "T", "estimate_hours": 8, "status": "done"}, headers=auth(tok))
+        d = client.get(f"/api/v1/projects/{pid}/analytics/burndown", headers=auth(tok)).json()["data"]
+        assert d["total_hours"] == 8 and d["points"][-1]["ideal"] == 0
+        assert any(p["actual"] == 0 for p in d["points"])
+
+    def test_non_member_404(self, client):
+        a = register_and_token(client, "bd2")
+        b = register_and_token(client, "bd3")
+        pid = make_project(client, a)
+        r = client.get(f"/api/v1/projects/{pid}/analytics/burndown", headers=auth(b))
+        assert r.status_code == 404

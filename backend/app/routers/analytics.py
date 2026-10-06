@@ -205,6 +205,37 @@ def get_health(
     return ok(data=result, message="Health score computed.")
 
 
+# ── GET /projects/{project_id}/analytics/burndown ────────────────────────────
+
+@router.get("/projects/{project_id}/analytics/burndown")
+def get_burndown(
+    project_id: int,
+    current_user=Depends(get_current_user),
+    membership=Depends(get_membership),
+    db: Session = Depends(get_db),
+):
+    """Ideal vs actual remaining hours per day (uses tasks' completed_at)."""
+    from app.services.burndown import compute_burndown
+
+    project: Project = db.get(Project, project_id)
+    tasks = db.execute(
+        select(Task).where(Task.project_id == project_id)
+    ).scalars().all()
+    result = compute_burndown(
+        project.start_date,
+        project.due_date,
+        [
+            {
+                "estimate_hours": t.estimate_hours,
+                "completed_at": t.completed_at if t.status == "done" else None,
+                "created_at": t.created_at,
+            }
+            for t in tasks
+        ],
+    )
+    return ok(data=result, message="Burndown computed.")
+
+
 # ── GET /ml/effort-benchmark ─────────────────────────────────────────────────
 
 @router.get("/ml/effort-benchmark")
