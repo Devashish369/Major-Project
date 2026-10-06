@@ -11,8 +11,9 @@
  *   3. Task Estimator          – TF-IDF+Ridge on 16 public Jira CSV datasets
  */
 import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import {
-  FlaskConical, Database, AlertTriangle, CheckCircle2,
+  ArrowLeft, FlaskConical, Database, AlertTriangle, CheckCircle2,
   BarChart3, Cpu, TrendingUp, Activity,
 } from 'lucide-react';
 import { getBenchmarks } from '../api/benchmarks';
@@ -102,6 +103,7 @@ function ConfusionMatrix({ cm }) {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function BenchmarksPage() {
+  const navigate = useNavigate();
   const { data, isLoading, isError } = useQuery({
     queryKey: ['benchmarks'],
     queryFn: getBenchmarks,
@@ -139,6 +141,12 @@ export default function BenchmarksPage() {
 
       {/* ── Page header ──────────────────────────────────────────────────── */}
       <div className="pt-2">
+        <button
+          onClick={() => navigate('/dashboard')}
+          className="flex items-center gap-1.5 text-sm text-slate-400 hover:text-white mb-4 transition"
+        >
+          <ArrowLeft className="h-4 w-4" /> Back to dashboard
+        </button>
         <div className="flex items-center gap-3 mb-1">
           <FlaskConical className="h-6 w-6 text-indigo-400" />
           <h1 className="text-xl font-bold text-white">Model Benchmarks</h1>
