@@ -8,6 +8,8 @@
  */
 
 /* Tailwind CSS v4: base reset and utility classes */
+@layer theme, base, components, utilities;
+@import "tailwindcss/theme" layer(theme);   /* colour/spacing variables the utilities read */
 @import "tailwindcss/preflight" layer(base);
 @import "tailwindcss/utilities" layer(utilities);
 
