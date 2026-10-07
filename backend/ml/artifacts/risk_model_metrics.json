@@ -1,63 +1,77 @@
 {
-  "model": "GradientBoostingClassifier(n_estimators=200, max_depth=4, lr=0.05)",
+  "model": "HistGradientBoostingClassifier(max_iter=300, lr=0.05, max_leaf_nodes=15, monotonic constraints)",
   "training_data": "SIMULATED (generate_synthetic.py) \u2013 NOT real project history",
-  "n_train": 3200,
-  "n_test": 800,
-  "accuracy": 0.9337,
-  "precision": 0.9206,
-  "recall": 0.9119,
+  "status": "experimental \u2013 the primary forecast is the Monte Carlo simulation; the ML signal is secondary",
+  "label_noise": 0.06,
+  "monotonic_constraints": {
+    "team_size": 0,
+    "avg_utilization": 1,
+    "overdue_ratio": 1,
+    "blocked_ratio": 1,
+    "slip": 1,
+    "remaining_ratio": 1,
+    "done_ratio": -1,
+    "days_to_due": -1
+  },
+  "n_train": 4800,
+  "n_test": 1200,
+  "accuracy": 0.9275,
+  "precision": 0.9216,
+  "recall": 0.8479,
+  "roc_auc": 0.9279,
   "confusion_matrix": [
     [
-      457,
-      25
+      784,
+      28
     ],
     [
-      28,
-      290
+      59,
+      329
     ]
   ],
+  "importance_method": "permutation importance (drop in test ROC-AUC), normalised to sum to 1",
   "feature_importances": {
-    "team_size": 0.00908,
-    "avg_utilization": 0.026752,
-    "overdue_ratio": 0.018712,
-    "blocked_ratio": 0.029271,
-    "slip": 0.02085,
-    "remaining_ratio": 0.828051,
-    "done_ratio": 0.023987,
-    "days_to_due": 0.043296
+    "team_size": 0.014658,
+    "avg_utilization": 0.00172,
+    "overdue_ratio": 0.009732,
+    "blocked_ratio": 0.00817,
+    "slip": 0.0,
+    "remaining_ratio": 0.506249,
+    "done_ratio": 0.010331,
+    "days_to_due": 0.44914
   },
   "feature_importances_sorted": [
     {
       "feature": "remaining_ratio",
-      "importance": 0.828051
+      "importance": 0.506249
     },
     {
       "feature": "days_to_due",
-      "importance": 0.043296
-    },
-    {
-      "feature": "blocked_ratio",
-      "importance": 0.029271
-    },
-    {
-      "feature": "avg_utilization",
-      "importance": 0.026752
-    },
-    {
-      "feature": "done_ratio",
-      "importance": 0.023987
-    },
-    {
-      "feature": "slip",
-      "importance": 0.02085
-    },
-    {
-      "feature": "overdue_ratio",
-      "importance": 0.018712
+      "importance": 0.44914
     },
     {
       "feature": "team_size",
-      "importance": 0.00908
+      "importance": 0.014658
+    },
+    {
+      "feature": "done_ratio",
+      "importance": 0.010331
+    },
+    {
+      "feature": "overdue_ratio",
+      "importance": 0.009732
+    },
+    {
+      "feature": "blocked_ratio",
+      "importance": 0.00817
+    },
+    {
+      "feature": "avg_utilization",
+      "importance": 0.00172
+    },
+    {
+      "feature": "slip",
+      "importance": 0.0
     }
   ],
   "features": [

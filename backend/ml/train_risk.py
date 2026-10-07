@@ -1,22 +1,22 @@
 """
-ml/train_risk.py – Train a risk classifier on synthetic data (spec §8.7).
+ml/train_risk.py – Train the EXPERIMENTAL delay-risk classifier on simulated data (spec §8.7).
 
 [!]  SIMULATED TRAINING DATA [!]
-The model is trained on data from generate_synthetic.py, which simulates
-project snapshots using a Monte Carlo model.  This is NOT trained on
-real project histories.  Use the probability as an indicative signal only.
+Trained on ml/data/synthetic_risk.csv from generate_synthetic.py, NOT on real project
+history.  In the app the primary forecast is the Monte Carlo simulation; this ML signal
+is secondary.
 
-Model: GradientBoostingClassifier (chosen over LogisticRegression because
-  it handles non-linear interactions between features like overdue_ratio
-  and days_to_due without manual feature engineering, and naturally provides
-  feature importances via the impurity-based method).
+Model: HistGradientBoostingClassifier with MONOTONIC CONSTRAINTS, so the risk can only go
+up when remaining_ratio, slip, overdue_ratio, blocked_ratio or avg_utilization go up, and
+can only go down when days_to_due or done_ratio go up (team_size is unconstrained).  The
+earlier unconstrained model gave erratic answers (utilisation 0.1 -> 86 % but 0.5 -> 32 %);
+the constraints make every prediction move in the explainable direction.
 
-Outputs:
-  ml/artifacts/risk_model.joblib        – trained pipeline
-  ml/artifacts/risk_model_metrics.json  – accuracy, precision, recall,
-                                          confusion matrix, feature importances
+Reported on a held-out 20 % test split: accuracy, precision, recall, ROC-AUC, confusion
+matrix and permutation importances (drop in test ROC-AUC when one feature is shuffled).
 
 Usage:
+    python -m ml.generate_synthetic
     python -m ml.train_risk
 """
 
@@ -24,17 +24,13 @@ import json
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import HistGradientBoostingClassifier
+from sklearn.inspection import permutation_importance
 from sklearn.metrics import (
-    accuracy_score, classification_report,
-    confusion_matrix, precision_score, recall_score,
+    accuracy_score, confusion_matrix, precision_score, recall_score, roc_auc_score,
 )
 from sklearn.model_selection import train_test_split
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import StandardScaler
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
 THIS_DIR     = Path(__file__).parent
@@ -43,10 +39,16 @@ ARTIFACTS    = THIS_DIR / "artifacts"
 MODEL_PATH   = ARTIFACTS / "risk_model.joblib"
 METRICS_PATH = ARTIFACTS / "risk_model_metrics.json"
 
+# Same order as services/risk.py FEATURES (prediction uses this exact order).
 FEATURES = [
     "team_size", "avg_utilization", "overdue_ratio", "blocked_ratio",
     "slip", "remaining_ratio", "done_ratio", "days_to_due",
 ]
+# +1 = risk non-decreasing in the feature, -1 = non-increasing, 0 = unconstrained
+MONOTONIC = {
+    "team_size": 0, "avg_utilization": 1, "overdue_ratio": 1, "blocked_ratio": 1,
+    "slip": 1, "remaining_ratio": 1, "done_ratio": -1, "days_to_due": -1,
+}
 TARGET = "delayed"
 TEST_SIZE = 0.20
 SEED = 42
@@ -54,88 +56,74 @@ SEED = 42
 
 def train():
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
-
     if not DATA_CSV.exists():
-        print(f"CSV not found at {DATA_CSV}. Running generate_synthetic.py first…")
         from ml.generate_synthetic import main as gen_main
         gen_main()
 
-    print("=" * 60)
-    print("IntelliPM Risk Classifier – Training (spec §8.7)")
+    print("IntelliPM Risk Classifier – Training (spec 8.7)")
     print("[!] Training data is SIMULATED - not real project history.")
-    print("=" * 60)
-
     df = pd.read_csv(DATA_CSV)
-    print(f"Loaded {len(df)} rows from {DATA_CSV}")
-    print(f"Class balance: {df[TARGET].value_counts().to_dict()}")
+    print(f"Loaded {len(df)} rows; class balance {df[TARGET].value_counts().to_dict()}")
 
     X = df[FEATURES].values
     y = df[TARGET].values
-
     X_train, X_test, y_train, y_test = train_test_split(
         X, y, test_size=TEST_SIZE, random_state=SEED, stratify=y
     )
-    print(f"Train: {len(X_train)}, Test: {len(X_test)}")
 
-    # GradientBoosting handles mixed scales natively, but we wrap in a pipeline
-    # with StandardScaler for consistency with the inference path.
-    pipe = Pipeline([
-        ("scaler", StandardScaler()),
-        ("clf", GradientBoostingClassifier(
-            n_estimators=200,
-            max_depth=4,
-            learning_rate=0.05,
-            subsample=0.8,
-            random_state=SEED,
-        )),
-    ])
-
-    pipe.fit(X_train, y_train)
-    y_pred = pipe.predict(X_test)
+    model = HistGradientBoostingClassifier(
+        max_iter=300,
+        learning_rate=0.05,
+        max_leaf_nodes=15,
+        l2_regularization=1.0,
+        monotonic_cst=[MONOTONIC[f] for f in FEATURES],
+        random_state=SEED,
+    )
+    model.fit(X_train, y_train)
+    y_pred = model.predict(X_test)
+    y_prob = model.predict_proba(X_test)[:, 1]
 
     acc  = accuracy_score(y_test, y_pred)
     prec = precision_score(y_test, y_pred, zero_division=0)
     rec  = recall_score(y_test, y_pred, zero_division=0)
+    auc  = roc_auc_score(y_test, y_prob)
     cm   = confusion_matrix(y_test, y_pred).tolist()
 
-    print(f"\nAccuracy:  {acc:.4f}")
-    print(f"Precision: {prec:.4f}   Recall: {rec:.4f}")
-    print("\nConfusion matrix (rows=actual, cols=predicted):")
-    print(f"  [[TN={cm[0][0]}  FP={cm[0][1]}]")
-    print(f"   [FN={cm[1][0]}  TP={cm[1][1]}]]")
+    # Permutation importance: drop in test ROC-AUC when one feature is shuffled.
+    perm = permutation_importance(model, X_test, y_test, scoring="roc_auc",
+                                  n_repeats=10, random_state=SEED)
+    raw = {f: max(0.0, float(v)) for f, v in zip(FEATURES, perm.importances_mean)}
+    total = sum(raw.values()) or 1.0
+    feat_imp = {f: round(v / total, 6) for f, v in raw.items()}      # shares that sum to 1
+    sorted_imp = sorted(feat_imp.items(), key=lambda kv: -kv[1])
 
-    # Feature importances (from the GBM estimator, post-scaling irrelevant)
-    importances = pipe.named_steps["clf"].feature_importances_
-    feat_imp = dict(zip(FEATURES, [round(float(v), 6) for v in importances]))
-    sorted_imp = sorted(feat_imp.items(), key=lambda x: -x[1])
-
-    print("\nFeature importances (descending):")
+    print(f"Accuracy {acc:.4f}  Precision {prec:.4f}  Recall {rec:.4f}  ROC-AUC {auc:.4f}")
+    print(f"Confusion matrix [[TN FP] [FN TP]] = {cm}")
     for name, val in sorted_imp:
-        print(f"  {name:<22} {val:.4f}")
+        print(f"  {name:<18} {val:.4f}")
 
-    # Save model
-    joblib.dump(pipe, MODEL_PATH)
-    print(f"\nModel saved to: {MODEL_PATH}")
-
+    joblib.dump(model, MODEL_PATH)
     metrics = {
-        "model": "GradientBoostingClassifier(n_estimators=200, max_depth=4, lr=0.05)",
+        "model": "HistGradientBoostingClassifier(max_iter=300, lr=0.05, max_leaf_nodes=15, monotonic constraints)",
         "training_data": "SIMULATED (generate_synthetic.py) – NOT real project history",
+        "status": "experimental – the primary forecast is the Monte Carlo simulation; the ML signal is secondary",
+        "label_noise": 0.06,
+        "monotonic_constraints": MONOTONIC,
         "n_train": int(len(X_train)),
         "n_test":  int(len(X_test)),
         "accuracy":  round(acc, 4),
         "precision": round(prec, 4),
         "recall":    round(rec, 4),
+        "roc_auc":   round(auc, 4),
         "confusion_matrix": cm,
+        "importance_method": "permutation importance (drop in test ROC-AUC), normalised to sum to 1",
         "feature_importances": feat_imp,
-        "feature_importances_sorted": [
-            {"feature": k, "importance": v} for k, v in sorted_imp
-        ],
+        "feature_importances_sorted": [{"feature": k, "importance": v} for k, v in sorted_imp],
         "features": FEATURES,
     }
     with open(METRICS_PATH, "w") as f:
         json.dump(metrics, f, indent=2)
-    print(f"Metrics saved to: {METRICS_PATH}")
-
+    print(f"Saved {MODEL_PATH.name} and {METRICS_PATH.name}")
     return metrics
 
 

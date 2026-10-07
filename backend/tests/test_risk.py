@@ -158,13 +158,10 @@ class TestPredictRisk:
         assert "SIMULATED" in r["data_note"].upper()
 
     def test_overdue_increases_risk(self):
-        """Higher overdue_ratio should produce higher delay probability."""
-        base = {**self.HEALTHY, "overdue_ratio": 0.0, "remaining_ratio": 4.0}
-        high = {**self.HEALTHY, "overdue_ratio": 0.8, "remaining_ratio": 4.0}
-        p_base = predict_risk(**base)["delay_probability"]
-        p_high = predict_risk(**high)["delay_probability"]
-        # This is an approximation – accept if they're different
-        assert p_high >= p_base or True   # soft check; model may weight other features more
+        """Higher overdue_ratio must never lower the delay probability (monotonic model)."""
+        base = {**self.HEALTHY, "overdue_ratio": 0.0, "remaining_ratio": 0.9}
+        high = {**self.HEALTHY, "overdue_ratio": 0.8, "remaining_ratio": 0.9}
+        assert predict_risk(**high)["delay_probability"] >= predict_risk(**base)["delay_probability"]
 
 
 # ── Integration tests ─────────────────────────────────────────────────────────
@@ -258,10 +255,6 @@ class TestPerProjectFactors:
         risk = client.get(f"/api/v1/projects/{pid}/analytics/health", headers=auth(tok)).json()["data"]["risk"]
         assert risk["delay_probability"] == 0.0 and risk["top_factors"] == []
 
-    @pytest.mark.xfail(strict=True, reason=(
-        "Known model defect (REVIEW_REPORT H-6): the classifier gives ~99% to a 2-hour project due in "
-        "60 days because avg_utilization=0 / done_ratio=0 sit at the edge of the simulated training data. "
-        "Inputs are now correct; the model itself needs retraining. Remove this mark once it passes."))
     def test_lots_of_work_close_to_due_is_riskier_than_little_work(self, client):
         tok = register_and_token(client, "rvload")
         heavy = make_project(client, tok, days_ahead=5)
@@ -271,3 +264,50 @@ class TestPerProjectFactors:
         client.post(f"/api/v1/projects/{light}/tasks", json={"title": "small", "estimate_hours": 2}, headers=auth(tok))
         p = lambda pid: client.get(f"/api/v1/projects/{pid}/analytics/health", headers=auth(tok)).json()["data"]["risk"]["delay_probability"]
         assert p(heavy) > 0.65 > p(light)
+
+
+# ── Task 1 (H-6): the constrained model moves in the explainable direction ────
+
+class TestMonotonicModel:
+    BASE = dict(team_size=6, avg_utilization=0.6, overdue_ratio=0.1, blocked_ratio=0.1,
+                slip=0.05, remaining_ratio=0.8, done_ratio=0.3, days_to_due=20)
+    UP = {"remaining_ratio": [0, 0.3, 0.6, 0.9, 1.2, 1.5, 3, 10], "slip": [0, 0.1, 0.2, 0.4, 0.6],
+          "overdue_ratio": [0, 0.2, 0.5, 0.9], "blocked_ratio": [0, 0.2, 0.5, 0.8],
+          "avg_utilization": [0, 0.5, 1.0, 1.5, 2.0]}
+    DOWN = {"days_to_due": [-10, 0, 5, 20, 60, 120], "done_ratio": [0, 0.3, 0.6, 0.9]}
+
+    def _sweep(self, feat, values):
+        return [predict_risk(**{**self.BASE, feat: v})["delay_probability"] for v in values]
+
+    @pytest.mark.parametrize("feat", list(UP))
+    def test_non_decreasing(self, feat):
+        ps = self._sweep(feat, self.UP[feat])
+        assert all(b >= a - 1e-9 for a, b in zip(ps, ps[1:])), (feat, ps)
+
+    @pytest.mark.parametrize("feat", list(DOWN))
+    def test_non_increasing(self, feat):
+        ps = self._sweep(feat, self.DOWN[feat])
+        assert all(b <= a + 1e-9 for a, b in zip(ps, ps[1:])), (feat, ps)
+
+    def test_probability_always_in_unit_interval(self):
+        import itertools
+        for r, d, u in itertools.product([0, 0.5, 1.5, 10], [-30, 0, 60, 120], [0, 1, 2]):
+            p = predict_risk(**{**self.BASE, "remaining_ratio": r, "days_to_due": d, "avg_utilization": u})["delay_probability"]
+            assert 0.0 <= p <= 1.0
+
+    def test_tiny_project_due_in_60_days_is_low(self):
+        f = build_features(team_size=2, capacities_per_week=[30, 30], member_utilizations=[0, 0],
+                           open_estimate_hours=2, overdue_ratio=0, blocked_ratio=0, slip=0,
+                           done_ratio=0, days_to_due=60)
+        assert predict_risk(**f)["delay_probability"] < 0.35
+
+    def test_one_and_a_half_times_remaining_is_high(self):
+        assert predict_risk(**{**self.BASE, "remaining_ratio": 1.5})["delay_probability"] >= 0.65
+
+    def test_metrics_report_roc_auc_and_constraints(self):
+        import json
+        with open(RISK_METRICS) as f:
+            m = json.load(f)
+        assert 0.5 < m["roc_auc"] <= 1.0
+        assert m["monotonic_constraints"]["remaining_ratio"] == 1 and m["monotonic_constraints"]["days_to_due"] == -1
+        assert "SIMULATED" in m["training_data"].upper()

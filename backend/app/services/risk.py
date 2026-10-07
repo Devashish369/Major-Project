@@ -1,7 +1,8 @@
 """
 services/risk.py – Runtime risk inference service (spec §8.7).
 
-Loads ml/artifacts/risk_model.joblib (GradientBoostingClassifier pipeline)
+Loads ml/artifacts/risk_model.joblib (HistGradientBoostingClassifier with monotonic
+constraints, see ml/train_risk.py)
 and ml/artifacts/risk_model_metrics.json at first call (lazy-load).
 
 build_features():
@@ -15,10 +16,9 @@ predict_risk():
     probability is recomputed; the features whose replacement moves the
     probability most are the ones driving this project's risk.
 
-⚠  The model is trained on SIMULATED data whose "delayed" label comes from a
-   Monte Carlo on remaining work vs capacity, so it mostly re-learns remaining_ratio.
-   Treat the probability as a learned shortcut of that simulation, not as
-   independent evidence.
+⚠  EXPERIMENTAL – trained on SIMULATED data (ml/generate_synthetic.py) whose "delayed"
+   label comes from a Monte Carlo on remaining work, throughput and deadline.  The
+   primary forecast is the Monte Carlo simulation; the ML signal is secondary.
 """
 
 import json

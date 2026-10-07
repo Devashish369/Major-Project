@@ -64,6 +64,23 @@ Mark ☑ only after the module's **"done when"** test in `PROJECT_SPEC.md` secti
 | 2026-10-06 | Claude Code | M13 | WS /ws/projects/{id}?token= (routers/ws.py): JWT decoded + membership checked before accept (refused with close code 1008 otherwise), DB session closed right after the check so long-lived sockets do not hold pool connections, ping/pong keep-alive, 50 sockets/project cap. services/realtime.py: in-memory rooms per project; sync endpoints publish via asyncio.run_coroutine_threadsafe AFTER commit; zero cost when nobody listens; failures are swallowed so REST never breaks. Events task_created/task_updated/task_deleted from task create/update/delete, dependency add/remove, assignments apply, apply-plan. Frontend hooks/useProjectSocket.js: connects while Board or Graph tab is open, patches the ['tasks'] cache, invalidates derived queries (project, health, forecast, burndown, workload), exponential back-off reconnect + one refetch after each re-open, gives up with 'offline' after 6 consecutive failed attempts; Live/Reconnecting/Offline badge. 14 new tests (handshake auth, non-member/invalid/missing token, ping, create/update/delete, dependency, multi-watcher, project isolation, assignments, REST unaffected when socket layer breaks) -> 211 green. Exercised with two real browser tabs: card moved in tab B appeared in tab A without reload, create + delete propagated, killing the backend gave 'Reconnecting…' while the board kept working, restarting it returned to 'Live' automatically and events flowed again | Single-process only (needs Redis for several instances). Token is in the WS URL (browser limitation) so it can appear in access logs. Events cover tasks only. Broke the feature freeze deliberately at the user's request: README, SPEC_DIFFERENCES and DEMO_SCRIPT updated. |
 | 2026-10-08 | Claude Code (final review) | Review | Full review per the Opus checklist (REVIEW_REPORT.md). Fresh-venv install + 211 tests green at start; 16/16 seed; 33-endpoint sweep all 2xx + envelope; 46-check IDOR matrix; independent recompute of health (exact), assignment (0 mismatches, MILP-optimal), forecast properties; failure modes (cached-only, invalid key, missing fallback key, mocked timeout) never crash; full demo-script UI walk. FIXED: C-1 member could add an admin account and then delete the project (members.py); C-2 SQLite did not enforce FKs -> deleting a project orphaned rows and the reused id gave the next project another user's members / a 500 (database.py PRAGMA foreign_keys=ON); H-1..H-5 risk model fed wrong remaining_ratio (1-progress instead of remaining hours / available hours), max instead of mean utilisation, identical 'top factors' for every project, 94% for a completed project, circular labels not disclosed (risk.py build_features + per-project factors, analytics.py, UI 'experimental' wording, Benchmarks note); M-1 apply-plan stored unvalidated plans (cycle -> forecast 500); M-2 forecast dates floored -> P90 on due date with 23% late; M-3 health overload used different weeks than workload bars; M-4 hidden SDK retries could stall the planner for minutes; M-5 non-member assignees accepted; M-6 Team tab showed 194% as 100%; Chat seed slack retuned (0.95) after M-2. Tests 211 -> 226 pass + 1 strict xfail (documents H-6); same on PostgreSQL; seed 16/16; build ok; lint 16 warnings 0 errors. Docs corrected (README, DEMO_SCRIPT, SPEC_DIFFERENCES). | OPEN, need approval: H-6 retrain risk model (~2 h) and M-7 sprint API/screens (~3-4 h). LOW items listed, untouched. |
 
+## Closing session (2026-10-08)
+
+Resume rule: continue at the first task that is not DONE.
+
+| Task | Status | Commit | Notes |
+|---|---|---|---|
+| 0 Commit review fixes | DONE | 77f9db8 | pushed at the user's request; synopsis .docx left untracked (not committed) |
+| 1 Risk model fix (H-6) | DONE | (see git log: 'Task 1') | HistGB + monotonic constraints, 6,000 simulated snapshots, all features affect labels; acc 92.8 %, ROC-AUC 0.93; ML/MC bands agree 12/16; xfail and vacuous test replaced; 238 tests SQLite + Postgres; seed 16/16 |
+| 2 Project report (M16) | TODO | | |
+| 3 Safe clean-ups (L-items) | TODO | | |
+| 4 Sprints, minimal | TODO | | |
+| 5 Deployment preflight | TODO | | |
+| 6 Testing report | TODO | | |
+| 7 Screenshots | TODO | | |
+| 8 Deck / synopsis fixes + viva Q&A | TODO | | |
+| 9 Final verification | TODO | | |
+
 ## Human checklist (do these yourself, not the AI)
 
 - [ ] `git init` in `MajorProject`, `.gitignore` created before the first commit
