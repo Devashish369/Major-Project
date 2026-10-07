@@ -276,4 +276,4 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 | Sprints | `GET /projects/{id}/sprints` (read-only: name, dates, goal, task_count, done_count) |
 | Realtime | `WS /ws/projects/{id}?token=<JWT>` (members only) pushes `{type: task_created \| task_updated \| task_deleted, task}`; send the text `ping` to keep it alive |
 
-See [PROGRESS.md](./PROGRESS.md) for the build log, [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 10-minute demo, and [SPEC_DIFFERENCES.md](./SPEC_DIFFERENCES.md) for where the product differs from `PROJECT_SPEC.md`.
+See [docs/TESTING_REPORT.md](./docs/TESTING_REPORT.md) for test evidence, [PROGRESS.md](./PROGRESS.md) for the build log, [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 10-minute demo, and [SPEC_DIFFERENCES.md](./SPEC_DIFFERENCES.md) for where the product differs from `PROJECT_SPEC.md`.
