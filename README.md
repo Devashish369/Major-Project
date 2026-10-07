@@ -25,6 +25,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Dependency graph | One node per task, blocked tasks in red, click to open the task | Graph tab |
 | Live updates | When a teammate creates, edits, moves or deletes a task, your Board and Graph update without a refresh (small "Live" badge; falls back to normal REST if the socket is unavailable) | Board / Graph tabs |
 | Decision log + Ask | Record decisions with reasons; ask questions and get answers that cite their sources | Decisions tab |
+| Project report | One printable report per project: executive summary, key insights and suggested actions written by fixed rules (no LLM) from the health score, forecast, workload, ML risk, overdue and blocked tasks, decisions and activity. "Print / Save as PDF" | Report tab |
 | Benchmarks | Metrics of the estimator, the risk model and the NASA93 effort benchmark | `Benchmarks` button on the dashboard |
 
 ## Architecture
@@ -265,6 +266,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 | AI | `POST /ai/generate-plan` · `POST /projects/{id}/apply-plan` · `POST /ai/estimate` · `POST /projects/{id}/assignments/recommend` · `POST /projects/{id}/assignments/apply` · `POST /projects/{id}/ask` |
 | Analytics | `GET /projects/{id}/analytics/health` · `/forecast` · `/workload` · `/burndown` · `GET /ml/effort-benchmark` |
 | Decisions | `GET/POST /projects/{id}/decisions` · `DELETE /decisions/{id}` |
+| Report | `GET /projects/{id}/report` (rule-based, no LLM) |
 | Realtime | `WS /ws/projects/{id}?token=<JWT>` (members only) pushes `{type: task_created \| task_updated \| task_deleted, task}`; send the text `ping` to keep it alive |
 
 See [PROGRESS.md](./PROGRESS.md) for the build log, [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 10-minute demo, and [SPEC_DIFFERENCES.md](./SPEC_DIFFERENCES.md) for where the product differs from `PROJECT_SPEC.md`.

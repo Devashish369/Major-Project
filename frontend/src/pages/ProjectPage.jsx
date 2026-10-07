@@ -24,6 +24,7 @@ import PlanTab from '../components/PlanTab';
 import AnalyticsTab from '../components/AnalyticsTab';
 import GraphTab from '../components/GraphTab';
 import DecisionsTab from '../components/DecisionsTab';
+import ReportTab from '../components/ReportTab';
 import useProjectSocket from '../hooks/useProjectSocket';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
@@ -436,7 +437,7 @@ function LiveBadge({ status }) {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 
-const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics', 'Graph', 'Decisions'];
+const TABS = ['Overview', 'Board', 'Plan', 'Team', 'Analytics', 'Graph', 'Decisions', 'Report'];
 
 export default function ProjectPage() {
   const { id } = useParams();
@@ -544,7 +545,7 @@ export default function ProjectPage() {
       </div>
 
       {/* Content */}
-      <main className={`mx-auto px-6 py-6 ${['Board', 'Analytics', 'Graph'].includes(tab) ? 'max-w-7xl' : 'max-w-4xl'}`}>
+      <main className={`mx-auto px-6 py-6 ${['Board', 'Analytics', 'Graph', 'Report'].includes(tab) ? 'max-w-7xl' : 'max-w-4xl'}`}>
         {tab === 'Overview' && project && <OverviewTab project={project} />}
         {tab === 'Board' && (
           <KanbanBoard tasks={tasks} projectId={projectId} />
@@ -553,6 +554,7 @@ export default function ProjectPage() {
           <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}
         {tab === 'Graph' && <GraphTab tasks={tasks} projectId={projectId} />}
+        {tab === 'Report' && <ReportTab projectId={projectId} />}
         {tab === 'Decisions' && (
           <DecisionsTab projectId={projectId} tasks={tasks} isAdmin={isAdmin} currentUserId={user?.id} />
         )}
