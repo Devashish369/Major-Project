@@ -73,8 +73,8 @@ Resume rule: continue at the first task that is not DONE.
 |---|---|---|---|
 | 0 Commit review fixes | DONE | 77f9db8 | pushed at the user's request; synopsis .docx left untracked (not committed) |
 | 1 Risk model fix (H-6) | DONE | fc1f0d2 | HistGB + monotonic constraints, 6,000 simulated snapshots, all features affect labels; acc 92.8 %, ROC-AUC 0.93; ML/MC bands agree 12/16; xfail and vacuous test replaced; 238 tests SQLite + Postgres; seed 16/16 |
-| 2 Project report (M16) | DONE | (see git log: 'Task 2') | GET /projects/{id}/report (rule-based, no LLM) + printable Report tab with @media print; 7 tests; 245 tests SQLite + Postgres; print preview itself not verifiable here (human check) |
-| 3 Safe clean-ups (L-items) | TODO | | |
+| 2 Project report (M16) | DONE | 117fa54 | GET /projects/{id}/report (rule-based, no LLM) + printable Report tab with @media print; 7 tests; 245 tests SQLite + Postgres; print preview itself not verifiable here (human check) |
+| 3 Safe clean-ups (L-items) | DONE | (see git log: 'Task 3') | L-1 docstring; L-3 lint 16 -> 0 (one justified disable for useAuth); L-4 script moved to backend/scripts/check_llm_connection.py; L-6 estimator MAE/MdAE on Benchmarks (additive `estimator` field); L-8 app/ml removed; L-5/L-7/L-9 in README; DEMO_PASSWORD env var; 248 tests SQLite + Postgres |
 | 4 Sprints, minimal | TODO | | |
 | 5 Deployment preflight | TODO | | |
 | 6 Testing report | TODO | | |

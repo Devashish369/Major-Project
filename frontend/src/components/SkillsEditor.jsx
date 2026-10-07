@@ -4,11 +4,10 @@
  * Opens from the Dashboard navbar. Calls PATCH /auth/me with the updated
  * skills dict. Skill levels are integers 1–5.
  */
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { X, Plus, Trash2, Loader2, Star } from 'lucide-react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { updateMe } from '../api/auth';
 
 export default function SkillsEditor({ onClose }) {
   const { user, updateProfile } = useAuth();

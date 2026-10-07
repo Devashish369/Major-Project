@@ -277,10 +277,15 @@ def get_effort_benchmark(
         with open(risk_metrics_path) as f:
             risk_metrics = json.load(f)
 
+    # Estimator (TF-IDF + Ridge) test-set metrics vs the median baseline (additive field)
+    est_path = Path(__file__).parent.parent.parent / "ml" / "artifacts" / "estimator_metrics.json"
+    estimator_metrics = json.load(open(est_path)) if est_path.exists() else None
+
     return ok(
         data={
             "effort": metrics,
             "risk":   risk_metrics,
+            "estimator": estimator_metrics,
             "label":  "benchmark on public NASA93 data (93 projects)",
             "risk_data_note": "Risk model trained on SIMULATED data (not real project history).",
         },

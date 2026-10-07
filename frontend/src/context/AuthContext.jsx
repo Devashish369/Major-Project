@@ -22,7 +22,8 @@ const TOKEN_KEY = 'intellipm_token';   // localStorage key
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);   // true while validating token
+  // true while validating a stored token; nothing to validate when there is none
+  const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY));
 
   /**
    * On mount: if a token exists in localStorage, call /auth/me to validate it
@@ -31,10 +32,7 @@ export function AuthProvider({ children }) {
    */
   useEffect(() => {
     const token = localStorage.getItem(TOKEN_KEY);
-    if (!token) {
-      setLoading(false);
-      return;
-    }
+    if (!token) return;
     // Token exists: validate with the server
     getMe()
       .then((userData) => setUser(userData))
@@ -86,6 +84,7 @@ export function AuthProvider({ children }) {
 }
 
 /** Custom hook – throws if used outside AuthProvider. */
+// eslint-disable-next-line react/only-export-components -- the hook deliberately lives next to its provider
 export function useAuth() {
   const ctx = useContext(AuthContext);
   if (!ctx) throw new Error('useAuth must be used within <AuthProvider>');

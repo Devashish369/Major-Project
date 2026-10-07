@@ -1,3 +1,9 @@
+"""
+scripts/check_llm_connection.py – manual one-off check that the primary LLM key works.
+
+Makes ONE real API call.  Lives outside tests/ and is not named test_*.py, so pytest never
+collects it.  Run from backend/:  python -m scripts.check_llm_connection
+"""
 from app.config import settings
 from openai import OpenAI
 

@@ -48,10 +48,7 @@ export default function useProjectSocket(projectId, enabled) {
   const [status, setStatus] = useState('off');
 
   useEffect(() => {
-    if (!enabled || !projectId) {
-      setStatus('off');
-      return undefined;
-    }
+    if (!enabled || !projectId) return undefined;   // returned status is 'off' below
 
     let ws = null;
     let retryTimer = null;
@@ -126,5 +123,5 @@ export default function useProjectSocket(projectId, enabled) {
     };
   }, [projectId, enabled, qc]);
 
-  return status;
+  return enabled && projectId ? status : 'off';
 }

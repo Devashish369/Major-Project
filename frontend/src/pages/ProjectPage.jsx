@@ -11,8 +11,8 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, BarChart2, Users, Loader2, UserPlus, Trash2,
-  Shield, User, Calendar, AlertCircle, LayoutDashboard,
-  Sparkles, CheckCircle2, ChevronDown, ChevronUp,
+  Shield, User, AlertCircle, LayoutDashboard,
+  Sparkles, CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getProject, listMembers, addMember, updateMember, removeMember, deleteProject } from '../api/projects';
@@ -391,8 +391,8 @@ function OverviewTab({ project }) {
   return (
     <div className="grid grid-cols-2 gap-4">
       {[
-        ['Status', <span className={STATUS_COLOR[project.status]}>{project.status.replace('_', ' ')}</span>],
-        ['Priority', <span className={PRIORITY_COLOR[project.priority]}>{project.priority}</span>],
+        ['Status', <span key="status" className={STATUS_COLOR[project.status]}>{project.status.replace('_', ' ')}</span>],
+        ['Priority', <span key="priority" className={PRIORITY_COLOR[project.priority]}>{project.priority}</span>],
         ['Start date', project.start_date || '—'],
         ['Due date', project.due_date || '—'],
         ['Members', project.member_count],

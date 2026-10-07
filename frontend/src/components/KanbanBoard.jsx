@@ -26,7 +26,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Clock, Loader2, AlertTriangle, CheckCircle2 } from 'lucide-react';
+import { Plus, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { updateTask } from '../api/tasks';
 import TaskDrawer from './TaskDrawer';
 import CreateTaskModal from './CreateTaskModal';
@@ -44,7 +44,7 @@ const PRIORITY_LEFT = {
 };
 
 // ── Sortable Task Card ────────────────────────────────────────────────────────
-function TaskCard({ task, onClick, isDragging }) {
+function TaskCard({ task, onClick }) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging: localDragging,
