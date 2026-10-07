@@ -394,7 +394,7 @@ Quality | Test plan for stock counts | testing | 8
         story="Scope creep (estimates growing)",
         description="Team chat with channels, file sharing and search. Requirements keep growing.",
         expect=("Medium risk", (0.5, 1.0)),
-        params=dict(progress=0.5, slip=0.2, f=1.0, dens=0.3, growth=0.42, overdue=3,
+        params=dict(progress=0.5, slip=0.2, f=0.95, dens=0.3, growth=0.42, overdue=3,
                     creep=True, sprints=3),
         team=[("rohan", "admin", 30), ("aarav", "member", 30), ("meera", "member", 26),
               ("sid", "member", 20), ("ananya", "member", 14), ("karan", "member", 18)],

@@ -46,7 +46,9 @@ def _weeks_remaining(due_date_str) -> float:
     try:
         due = date.fromisoformat(due_date_str)
         delta = (due - date.today()).days
-        return max(1, delta) / 7
+        # Same rule as services/workload.py (at least 1 week), so the health "overload"
+        # penalty and the Team-tab workload bars always use the same utilisation.
+        return max(1.0, delta / 7)
     except (ValueError, TypeError):
         return 4.0
 
@@ -182,22 +184,30 @@ def get_health(
 
     # M8: enrich with ML risk probability + top 3 factors
     try:
-        from app.services.risk import predict_risk
+        from app.services.risk import build_features, predict_risk
         diag = result["diagnostics"]
-        risk_result = predict_risk(
-            team_size=max(1, len(members)),
-            avg_utilization=diag["max_utilization"],
+        if diag["open_tasks"] == 0:
+            # Nothing left that can be late; the model was never trained on finished projects.
+            result["risk"] = {
+                "delay_probability": 0.0, "risk_level": "Low", "top_factors": [],
+                "data_note": "No open tasks – nothing left that can be late.",
+            }
+            return ok(data=result, message="Health score computed.")
+        features = build_features(
+            team_size=len(members),
+            capacities_per_week=[m.capacity_hours_per_week for m in members],
+            member_utilizations=member_utilizations,
+            open_estimate_hours=sum((t.estimate_hours or 0) for t in tasks if t.status != "done"),
             overdue_ratio=diag["overdue_ratio"],
             blocked_ratio=diag["blocked_ratio"],
             slip=diag["slip"],
-            remaining_ratio=max(0.0, 1.0 - diag["actual_progress"]),
             done_ratio=diag["actual_progress"],
             days_to_due=(
                 (date.fromisoformat(project.due_date) - date.today()).days
                 if project.due_date else 30
             ),
         )
-        result["risk"] = risk_result
+        result["risk"] = predict_risk(**features)
     except Exception as e:
         logger.warning("Risk model not available: %s", e)
         result["risk"] = None

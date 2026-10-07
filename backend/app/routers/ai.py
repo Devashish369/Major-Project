@@ -22,7 +22,9 @@ from app.database import get_db
 from app.deps import get_current_user, require_admin
 from app.models import ActivityLog, Project, ProjectMember, Sprint, Task, TaskDependency
 from app.schemas import GeneratePlanRequest, ApplyPlanRequest, EstimateRequest
-from app.services.planner import generate_plan
+from pydantic import ValidationError
+
+from app.services.planner import Plan, _postprocess, generate_plan
 from app.services.tasks import write_activity
 from app.services.realtime import emit_tasks
 from app.services.estimator import estimate as _estimate_sp
@@ -81,7 +83,13 @@ def apply_plan(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found.")
 
-    plan = body.plan
+    # The body comes from the client, so run it through the SAME validation and clean-up as a
+    # generated plan (estimates 1-40 h, max 40 tasks, unknown dependencies dropped, cycles broken).
+    # Without this an API caller could store a dependency cycle, which breaks the forecast.
+    try:
+        plan = _postprocess(Plan.model_validate(body.plan)).model_dump()
+    except ValidationError as exc:
+        raise HTTPException(status_code=422, detail=f"The plan is not valid: {exc.errors()[0]['msg']}")
 
     # ── 1. Create sprints ─────────────────────────────────────────────────────
     sprint_ids: list[int] = []

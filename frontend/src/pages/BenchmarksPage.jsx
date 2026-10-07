@@ -275,7 +275,7 @@ export default function BenchmarksPage() {
 
             <p className="mt-4 text-xs text-slate-500">
               Model: {risk.model ?? 'GradientBoostingClassifier'}.
-              Training data: {risk.n_train ?? '—'} simulated snapshots with 8% label noise.
+              Training data: {risk.n_train ?? '—'} simulated snapshots with 8% label noise. Because each label is computed from remaining work vs. available capacity (the remaining_ratio feature), the accuracy mainly shows how well the model re-learns that simulation rule (100% minus the 8% noise is the ceiling); it is not evidence of accuracy on real projects.
             </p>
           </>
         ) : (

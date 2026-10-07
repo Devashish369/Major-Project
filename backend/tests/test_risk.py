@@ -217,3 +217,57 @@ class TestEffortBenchmarkEndpoint:
         r = client.get("/api/v1/ml/effort-benchmark", headers=auth(tok))
         note = r.json()["data"]["risk_data_note"]
         assert "SIMULATED" in note.upper()
+
+
+# ── Review fixes R-1/R-2/R-3: features use the training definitions; factors are per project ──
+
+from app.services.risk import build_features
+
+
+class TestBuildFeatures:
+    def test_remaining_ratio_matches_training_definition(self):
+        # generate_synthetic.py: remaining = open hours × (1 + slip); available/day = Σcap/5 × 0.7
+        f = build_features(team_size=2, capacities_per_week=[30, 30], member_utilizations=[0.2, 0.6],
+                           open_estimate_hours=100, overdue_ratio=0, blocked_ratio=0, slip=0.1,
+                           done_ratio=0.5, days_to_due=10)
+        assert f["remaining_ratio"] == pytest.approx(110 / (60 / 5 * 0.7 * 10))
+        assert f["avg_utilization"] == pytest.approx(0.4)          # mean, not max
+
+    def test_edge_cases(self):
+        common = dict(team_size=1, member_utilizations=[], overdue_ratio=0, blocked_ratio=0,
+                      slip=0, done_ratio=0, days_to_due=-5)
+        assert build_features(capacities_per_week=[30], open_estimate_hours=0, **common)["remaining_ratio"] == 0
+        assert build_features(capacities_per_week=[], open_estimate_hours=10, **common)["remaining_ratio"] == 10
+        # overdue project: divide by max(1, days) like the training data
+        assert build_features(capacities_per_week=[50], open_estimate_hours=7, **common)["remaining_ratio"] == pytest.approx(1.0)
+
+
+class TestPerProjectFactors:
+    def test_factors_differ_between_projects_and_match_their_sign(self):
+        a = predict_risk(**TestPredictRisk.HEALTHY)["top_factors"]
+        b = predict_risk(**TestPredictRisk.RISKY)["top_factors"]
+        assert [x["feature"] for x in a] != [x["feature"] for x in b]
+        for f in a + b:
+            assert "contribution" in f
+            assert (f["direction"] == "increases risk") == (f["contribution"] > 0)
+
+    def test_completed_project_reports_zero_risk(self, client):
+        tok = register_and_token(client, "rvdone")
+        pid = make_project(client, tok)
+        client.post(f"/api/v1/projects/{pid}/tasks", json={"title": "x", "estimate_hours": 4, "status": "done"}, headers=auth(tok))
+        risk = client.get(f"/api/v1/projects/{pid}/analytics/health", headers=auth(tok)).json()["data"]["risk"]
+        assert risk["delay_probability"] == 0.0 and risk["top_factors"] == []
+
+    @pytest.mark.xfail(strict=True, reason=(
+        "Known model defect (REVIEW_REPORT H-6): the classifier gives ~99% to a 2-hour project due in "
+        "60 days because avg_utilization=0 / done_ratio=0 sit at the edge of the simulated training data. "
+        "Inputs are now correct; the model itself needs retraining. Remove this mark once it passes."))
+    def test_lots_of_work_close_to_due_is_riskier_than_little_work(self, client):
+        tok = register_and_token(client, "rvload")
+        heavy = make_project(client, tok, days_ahead=5)
+        light = make_project(client, tok, days_ahead=60)
+        for _ in range(6):
+            client.post(f"/api/v1/projects/{heavy}/tasks", json={"title": "big", "estimate_hours": 40}, headers=auth(tok))
+        client.post(f"/api/v1/projects/{light}/tasks", json={"title": "small", "estimate_hours": 2}, headers=auth(tok))
+        p = lambda pid: client.get(f"/api/v1/projects/{pid}/analytics/health", headers=auth(tok)).json()["data"]["risk"]["delay_probability"]
+        assert p(heavy) > 0.65 > p(light)

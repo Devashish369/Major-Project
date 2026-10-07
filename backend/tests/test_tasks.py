@@ -277,3 +277,22 @@ class TestActivityLog:
         r = client.get(f"/api/v1/projects/{pid}/activity", headers=auth(tok))
         actions = [row["action"] for row in r.json()["data"]]
         assert "task_deleted" in actions
+
+
+# ── Review fix M-5: assignee must be a project member ─────────────────────────
+
+def test_assignee_must_be_project_member():
+    from fastapi.testclient import TestClient
+    from app.main import app
+    c = TestClient(app)
+    def reg(n):
+        r = c.post("/api/v1/auth/register", json={"email": f"{n}@asg.com", "username": n, "full_name": n, "password": "password123"})
+        return {"Authorization": f"Bearer {r.json()['data']['access_token']}"}
+    owner, outsider = reg("asgown"), reg("asgout")
+    out_id = c.get("/api/v1/auth/me", headers=outsider).json()["data"]["id"]
+    me_id = c.get("/api/v1/auth/me", headers=owner).json()["data"]["id"]
+    pid = c.post("/api/v1/projects", json={"title": "P"}, headers=owner).json()["data"]["id"]
+    assert c.post(f"/api/v1/projects/{pid}/tasks", json={"title": "t", "assignee_id": out_id}, headers=owner).status_code == 422
+    tid = c.post(f"/api/v1/projects/{pid}/tasks", json={"title": "t", "assignee_id": me_id}, headers=owner).json()["data"]["id"]
+    assert c.patch(f"/api/v1/tasks/{tid}", json={"assignee_id": out_id}, headers=owner).status_code == 422
+    assert c.get(f"/api/v1/tasks/{tid}", headers=owner).json()["data"]["assignee_id"] == me_id

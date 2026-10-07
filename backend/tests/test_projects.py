@@ -258,3 +258,67 @@ class TestSkillsEdit:
         assert "react" in data
         # python was replaced
         assert "python" not in data
+
+
+# ── Review fix C-1: no privilege escalation through "add member" ─────────────
+
+class TestNoAdminEscalation:
+    def test_member_cannot_add_someone_as_admin(self, client):
+        owner = register(client, "own@esc.com", "ownesc")
+        member = register(client, "mem@esc.com", "memesc")
+        register(client, "evil@esc.com", "evilesc")
+        pid = create_project(client, owner).json()["data"]["id"]
+        client.post(f"/api/v1/projects/{pid}/members", json={"email": "mem@esc.com", "role": "member"}, headers=auth(owner))
+        r = client.post(f"/api/v1/projects/{pid}/members", json={"email": "evil@esc.com", "role": "admin"}, headers=auth(member))
+        assert r.status_code == 403
+        roles = {m["email"]: m["role"] for m in client.get(f"/api/v1/projects/{pid}/members", headers=auth(owner)).json()["data"]}
+        assert "evil@esc.com" not in roles
+
+    def test_member_can_still_add_a_regular_member_and_admin_can_add_admin(self, client):
+        owner = register(client, "own2@esc.com", "own2esc")
+        member = register(client, "mem2@esc.com", "mem2esc")
+        register(client, "new2@esc.com", "new2esc")
+        register(client, "adm2@esc.com", "adm2esc")
+        pid = create_project(client, owner).json()["data"]["id"]
+        client.post(f"/api/v1/projects/{pid}/members", json={"email": "mem2@esc.com", "role": "member"}, headers=auth(owner))
+        assert client.post(f"/api/v1/projects/{pid}/members", json={"email": "new2@esc.com", "role": "member"},
+                           headers=auth(member)).status_code == 201
+        assert client.post(f"/api/v1/projects/{pid}/members", json={"email": "adm2@esc.com", "role": "admin"},
+                           headers=auth(owner)).status_code == 201
+
+
+# ── Review fix C-2: deleting a project removes its children (SQLite too) ─────
+
+class TestProjectDeleteCascades:
+    def test_children_removed_and_recycled_id_starts_clean(self, client):
+        from sqlalchemy import select, func
+        from tests.conftest import TestingSessionLocal
+        from app.models import ActivityLog, Decision, ProjectMember, Task, TaskDependency
+
+        a = register(client, "casc_a@x.com", "casca")
+        register(client, "casc_b@x.com", "cascb")
+        c = register(client, "casc_c@x.com", "cascc")
+        pid = create_project(client, a).json()["data"]["id"]
+        client.post(f"/api/v1/projects/{pid}/members", json={"email": "casc_b@x.com"}, headers=auth(a))
+        t1 = client.post(f"/api/v1/projects/{pid}/tasks", json={"title": "T1"}, headers=auth(a)).json()["data"]["id"]
+        t2 = client.post(f"/api/v1/projects/{pid}/tasks", json={"title": "T2"}, headers=auth(a)).json()["data"]["id"]
+        client.post(f"/api/v1/tasks/{t2}/dependencies", json={"depends_on_id": t1}, headers=auth(a))
+        client.post(f"/api/v1/projects/{pid}/decisions", json={"title": "D", "decision": "d"}, headers=auth(a))
+
+        assert client.delete(f"/api/v1/projects/{pid}", headers=auth(a)).status_code == 200
+        db = TestingSessionLocal()
+        try:
+            for model in (ProjectMember, Task, ActivityLog, Decision):
+                n = db.execute(select(func.count()).select_from(model).where(model.project_id == pid)).scalar_one()
+                assert n == 0, model.__name__
+            assert db.execute(select(func.count()).select_from(TaskDependency)).scalar_one() == 0
+        finally:
+            db.close()
+
+        # A different user's new project (SQLite may reuse the id) must not inherit anything
+        new = create_project(client, c, title="Fresh")
+        assert new.status_code == 201
+        nid = new.json()["data"]["id"]
+        members = client.get(f"/api/v1/projects/{nid}/members", headers=auth(c)).json()["data"]
+        assert [m["email"] for m in members] == ["casc_c@x.com"]
+        assert client.get(f"/api/v1/projects/{nid}/tasks", headers=auth(c)).json()["data"] == []

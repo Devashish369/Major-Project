@@ -192,9 +192,12 @@ def run_forecast(
     p80_days = float(np.percentile(durations_arr, 80))
     p90_days = float(np.percentile(durations_arr, 90))
 
-    p50_date = (today + timedelta(days=p50_days)).isoformat()
-    p80_date = (today + timedelta(days=p80_days)).isoformat()
-    p90_date = (today + timedelta(days=p90_days)).isoformat()
+    # Round UP to whole days: work that needs 10.3 days is finished on day 11.  This keeps
+    # the dates consistent with delay_probability below (late  <=>  duration > days to due),
+    # e.g. "P90 on or before the due date" now always means "at most 10 % chance of being late".
+    p50_date = (today + timedelta(days=math.ceil(p50_days))).isoformat()
+    p80_date = (today + timedelta(days=math.ceil(p80_days))).isoformat()
+    p90_date = (today + timedelta(days=math.ceil(p90_days))).isoformat()
 
     # ── 8. Delay probability ──────────────────────────────────────────────────
     delay_prob: Optional[float] = None

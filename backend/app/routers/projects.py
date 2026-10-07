@@ -69,10 +69,11 @@ def _project_out(project: Project, db: Session) -> dict:
 
     from datetime import date as _date
     today = _date.today()
-    weeks_remaining = max(1, (
+    # At least 1 week, same as services/workload.py (keeps health and workload bars consistent)
+    weeks_remaining = max(1.0, (
         (_date.fromisoformat(project.due_date) - today).days
         if project.due_date else 28
-    )) / 7
+    ) / 7)
 
     member_utils = []
     for m in members_raw:
