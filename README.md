@@ -160,6 +160,8 @@ Covers auth, permissions, tasks and cycle rejection, the planner (LLM always moc
 
 ## Deployment (Render + Neon, no Docker)
 
+For the click-by-click version with verification, morning-of routine and rollback, see **[DEPLOY_CHECKLIST.md](./DEPLOY_CHECKLIST.md)**.
+
 Architecture: **Neon** (PostgreSQL) ← **Render web service** (FastAPI, `backend/`) ← **Render static site** (React build, `frontend/`).
 `render.yaml` in the repo root describes both Render services (Blueprint). The ML models in `backend/ml/artifacts/` are committed, so
 they ship with the deploy; the ML libraries are pinned in `requirements.txt` to the versions that created them.
