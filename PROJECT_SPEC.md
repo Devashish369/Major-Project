@@ -177,8 +177,8 @@ health = 100 − 30·overdue_ratio − 20·blocked_ratio
 - Runtime: `hours = story_points × HOURS_PER_STORY_POINT` (assumption, documented).
 
 ### 8.7 Risk classifier and effort benchmark (`ml/…`)
-- `generate_synthetic.py` simulates ≥3,000 project snapshots (team size, utilization, overdue_ratio, blocked_ratio, slip, remaining_hours / available_hours, etc.) and labels `delayed` using the Monte Carlo outcome plus noise. **Document that this is simulated data.**
-- `train_risk.py` trains a scikit-learn classifier (LogisticRegression or GradientBoosting); report accuracy, precision/recall, confusion matrix, and feature importances. UI shows the probability next to the rule-based health score, with the top 3 contributing factors.
+- `generate_synthetic.py` simulates ≥3,000 project snapshots (6,000 used) over the full range of team size, utilization, overdue_ratio, blocked_ratio, slip, remaining_ratio, done_ratio and days_to_due, and labels `delayed` using a Monte Carlo outcome in which every feature has a documented effect (overload lowers throughput, blocked work adds idle time, overdue work and slip raise the overrun), plus 5–8 % label noise. **Document that this is simulated data.**
+- `train_risk.py` trains a `HistGradientBoostingClassifier` with monotonic constraints (risk non-decreasing in remaining_ratio, slip, overdue_ratio, blocked_ratio, avg_utilization; non-increasing in days_to_due, done_ratio); report accuracy, precision/recall, ROC-AUC, confusion matrix, and permutation importances. UI shows the probability next to the rule-based health score, labelled **experimental, trained on SIMULATED projects**, with the top 3 per-project contributing factors. The primary forecast is the Monte Carlo simulation; the ML signal is secondary.
 - `train_effort.py`: load `Datasets/nasa93.arff` with `scipy.io.arff`, convert COCOMO rating labels (`vl,l,n,h,vh,xh`) to ordered numbers, train a regressor for person-months, report cross-validated MAE/R². Exposed at `GET /ml/effort-benchmark` and shown on a page labelled **"benchmark on public NASA93 data (93 projects)"**.
 
 ### 8.8 Decision log and Q&A (M12)

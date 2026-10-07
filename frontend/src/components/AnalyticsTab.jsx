@@ -99,7 +99,7 @@ function HealthCard({ query }) {
 function RiskCard({ query }) {
   return (
     <Card title="Delay risk (ML, experimental)"
-      subtitle="Classifier trained on SIMULATED projects – indicative only; the Monte Carlo forecast is the primary estimate"
+      subtitle="Trained on SIMULATED projects. The primary forecast is the Monte Carlo simulation; the ML signal is secondary."
       query={query}
       isEmpty={(d) => !d?.risk || d.diagnostics.open_tasks + d.diagnostics.done_tasks === 0}
       emptyText="Add tasks to see a delay-risk estimate.">

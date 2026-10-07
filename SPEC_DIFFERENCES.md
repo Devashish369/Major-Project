@@ -43,7 +43,7 @@ Checked against the code and tests on 2026-10-06 and re-checked in the final rev
 | Item | Value | Honest reading |
 |---|---|---|
 | Estimator (TF-IDF + Ridge), 23,313 Jira issues, held-out test set (4,671) | MAE **3.14** vs median baseline **3.26** story points; MdAE 1.89 vs 2.00 | Small but real improvement; story points are noisy. |
-| Risk classifier (gradient boosting), 4,000 **simulated** snapshots | accuracy 93.4 %, precision 92.1 %, recall 91.2 % | Agreement with the simulator, **not** real-world accuracy. The label is computed from (almost) one feature, `remaining_ratio` (83 % of the importance), plus 8 % random flips, so ~92 % is the ceiling. Call the ML card **experimental**. |
+| Risk classifier (HistGradientBoosting, monotonic constraints), 6,000 **simulated** snapshots | accuracy 92.8 %, precision 92.2 %, recall 84.8 %, ROC-AUC 0.93 (held-out 1,200) | Agreement with the simulation that produced the labels, **not** real-world accuracy. Call it **experimental and secondary**; ML vs Monte Carlo bands agree on 12/16 demo projects. |
 | NASA93 effort benchmark (gradient boosting), 93 real projects, 5-fold CV | MAE ≈ 308 person-months, R² **0.27 ± 0.63** | Weak and unstable, as expected with 93 heterogeneous projects. Present it as a benchmark of the method. |
 | Forecast | 5,000 Monte Carlo runs, seeded; overrun default log-normal(μ=0.10, σ=0.35), learned from the project if ≥ 10 finished tasks have actual hours | |
 | Tests | 226 pytest tests pass + 1 xfail (SQLite in memory and PostgreSQL) | The xfail documents the risk-model defect H-6 in REVIEW_REPORT.md |
@@ -57,6 +57,7 @@ These are behaviour changes made while fixing defects; quote the new behaviour.
 |---|---|
 | Adding members | Any member may still add a regular member, but only an admin can add someone **as admin** (previously a member could add an admin account and then delete the project). |
 | SQLite | Foreign keys are enforced, so deleting a project removes its members, tasks, decisions and activity (as PostgreSQL always did). |
+| Risk model (closing session) | Retrained: every feature now affects the simulated label in a documented way; HistGradientBoosting with monotonic constraints; ROC-AUC and permutation importances reported. |
 | Risk model inputs | Built with the training definitions (`remaining_ratio` = remaining hours ÷ available hours until due; average – not max – utilisation). Projects with no open work show 0 %. "Top factors" are computed per project. |
 | Risk card wording | "Delay risk (ML, experimental) – trained on SIMULATED projects; the Monte Carlo forecast is the primary estimate". |
 | Forecast dates | P50/P80/P90 dates are rounded up to whole days, so they always agree with the delay probability. |
