@@ -77,8 +77,8 @@ Resume rule: continue at the first task that is not DONE.
 | 3 Safe clean-ups (L-items) | DONE | 6d61d8a | L-1 docstring; L-3 lint 16 -> 0 (one justified disable for useAuth); L-4 script moved to backend/scripts/check_llm_connection.py; L-6 estimator MAE/MdAE on Benchmarks (additive `estimator` field); L-8 app/ml removed; L-5/L-7/L-9 in README; DEMO_PASSWORD env var; 248 tests SQLite + Postgres |
 | 4 Sprints, minimal | DONE | 5381748 | GET /projects/{id}/sprints (read-only, counts) + Board sprint filter and card badges; 3 tests; 251 tests SQLite + Postgres; filter checked in the browser (Hospital: 3 sprints, Sprint 1 -> 6 cards) |
 | 5 Deployment preflight | DONE | dd7d0f3 | Neon URL test (sslmode + channel_binding, both prefixes); prod build with dummy VITE_API_BASE_URL contains it and no localhost; runtime files tracked; render.yaml OK (no change); DEPLOY_CHECKLIST.md written |
-| 6 Testing report | DONE | (see git log: 'Task 6') | docs/TESTING_REPORT.md from fresh runs: 255 tests SQLite + Postgres 18.4, seed 16/16, ML metrics, failure modes i-iv re-run, permission matrix 47/47, defect table, manual UAT table |
-| 7 Screenshots | TODO | | |
+| 6 Testing report | DONE | 7aed470 | docs/TESTING_REPORT.md from fresh runs: 255 tests SQLite + Postgres 18.4, seed 16/16, ML metrics, failure modes i-iv re-run, permission matrix 47/47, defect table, manual UAT table |
+| 7 Screenshots | DONE | (see git log: 'Task 7') | Playwright driving the installed Microsoft Edge (Chromium download timed out); 10 PNGs at 1600x900 in docs/screenshots, cached-plan mode; graph edges visible |
 | 8 Deck / synopsis fixes + viva Q&A | TODO | | |
 | 9 Final verification | TODO | | |
 
