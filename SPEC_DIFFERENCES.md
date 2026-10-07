@@ -30,6 +30,8 @@ Checked against the code and tests on 2026-10-06 and re-checked in the final rev
 
 ## 3. Added beyond the spec
 
+- **M16 Project report** (added after the final review, because the synopsis promises "intelligent reports"): `GET /projects/{id}/report` and a printable **Report** tab. Insights and suggested actions are deterministic rule templates over the app's own numbers; no LLM is called.
+
 - `GET /projects/{id}/activity` (activity log feed).
 - The Plan tab flags tasks where the model's hours and the LLM's differ by more than 3× (spec M6 asked for this; the LLM value is never overwritten).
 - A demo-only account `demo@intellipm.demo` that is an admin of all 16 demo projects (10 h/week capacity, so it appears as an always-"available" member in workload views), and `python -m seed.seed_demo --attach EMAIL`.

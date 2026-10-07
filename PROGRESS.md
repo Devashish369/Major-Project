@@ -30,6 +30,7 @@
 | M12    | Decision log + Ask                        | SHOULD   | ☑     | Oct 13      |
 | M13    | WebSocket live updates                    | STRETCH  | ☑     | Oct 13      |
 | M14    | Postgres switch, deploy, freeze           | FINAL    | ◐ (Postgres ☑, deploy = human) | Oct 14      |
+| M16    | Project report (printable, rule-based)    | MUST     | ☑     | Oct 8       |
 | M15    | Tests, README, report, deck               | FINAL    | ☑ (deck/report = human) | Oct 15      |
 | —     | Rehearsal only, no new features           | —       | ☐     | Oct 16–17  |
 
@@ -71,8 +72,8 @@ Resume rule: continue at the first task that is not DONE.
 | Task | Status | Commit | Notes |
 |---|---|---|---|
 | 0 Commit review fixes | DONE | 77f9db8 | pushed at the user's request; synopsis .docx left untracked (not committed) |
-| 1 Risk model fix (H-6) | DONE | (see git log: 'Task 1') | HistGB + monotonic constraints, 6,000 simulated snapshots, all features affect labels; acc 92.8 %, ROC-AUC 0.93; ML/MC bands agree 12/16; xfail and vacuous test replaced; 238 tests SQLite + Postgres; seed 16/16 |
-| 2 Project report (M16) | TODO | | |
+| 1 Risk model fix (H-6) | DONE | fc1f0d2 | HistGB + monotonic constraints, 6,000 simulated snapshots, all features affect labels; acc 92.8 %, ROC-AUC 0.93; ML/MC bands agree 12/16; xfail and vacuous test replaced; 238 tests SQLite + Postgres; seed 16/16 |
+| 2 Project report (M16) | DONE | (see git log: 'Task 2') | GET /projects/{id}/report (rule-based, no LLM) + printable Report tab with @media print; 7 tests; 245 tests SQLite + Postgres; print preview itself not verifiable here (human check) |
 | 3 Safe clean-ups (L-items) | TODO | | |
 | 4 Sprints, minimal | TODO | | |
 | 5 Deployment preflight | TODO | | |

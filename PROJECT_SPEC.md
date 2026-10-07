@@ -31,6 +31,7 @@
 | SHOULD | Decision log + project Q&A | M12 |
 | STRETCH | WebSocket live board updates | M13 |
 | FINAL | Postgres switch, deploy, freeze, tests, report, deck | M14–M15 |
+| MUST (added after review) | Printable project report (rule-based insights, no LLM) | M16 |
 
 **Cut line: end of Oct 11.** Anything in MUST not working by then is fixed first; SHOULD/STRETCH not started by then moves to "Future Scope" and the deck/synopsis are edited to match.
 
@@ -120,6 +121,7 @@ Response envelope: `{ "success": true, "data": ..., "message": "..." }`. Errors:
 - `POST /projects/{id}/ask` `{question}` → `{answer, sources:[{type,id}]}` (M12)
 **Analytics:** `GET /projects/{id}/analytics/health` · `/forecast` · `/workload` · `/burndown` · `GET /ml/effort-benchmark`
 **Decisions:** `GET/POST /projects/{id}/decisions` · `DELETE /decisions/{id}`
+**Report (M16):** `GET /projects/{id}/report` → health + penalties, forecast, task stats, workload, ML risk (flagged experimental/simulated), top overdue and blocked tasks, last 10 decisions and activity rows, and rule-based `insights` / `suggested_actions` (deterministic templates; no LLM). Member-only.
 **Realtime (M13):** `WS /ws/projects/{id}?token=...` broadcasts `{type:"task_updated"|"task_created"|"task_deleted", task}`.
 `GET /health` returns `{status:"ok"}`.
 
@@ -234,6 +236,7 @@ Add 2–4 spares if time allows. Dates are generated **relative to today** so th
 | **M13** | WebSocket live updates | Two browsers see a card move |
 | **M14** | Postgres switch, deploy, feature freeze | App runs on Postgres locally and deployed; demo script rehearsed |
 | **M15** | Tests, README, report, updated deck | `pytest` green; docs match the real product |
+| **M16** | Project report endpoint + printable Report tab | Seeded E-commerce report names the overloaded members; IoT report names the task that blocks others; Print / Save as PDF works |
 
 ## 12. Rules for AI coding sessions
 
