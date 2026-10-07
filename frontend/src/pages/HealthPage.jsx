@@ -5,6 +5,7 @@
  * Uses @tanstack/react-query for data fetching so loading/error states
  * are handled cleanly. This pattern is reused throughout the project.
  */
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Loader2, Server } from 'lucide-react';
 import apiClient from '../api/client';
@@ -16,6 +17,7 @@ async function fetchHealth() {
 }
 
 export default function HealthPage() {
+  const [today] = useState(() => new Date().toLocaleDateString());   // computed once, not on every render
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['health'],         // cache key
     queryFn: fetchHealth,
@@ -88,7 +90,7 @@ export default function HealthPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-slate-600">
-          IntelliPM · M0 skeleton · {new Date().toLocaleDateString()}
+          IntelliPM · M0 skeleton · {today}
         </p>
       </div>
     </div>

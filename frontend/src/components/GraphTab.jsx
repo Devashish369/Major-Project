@@ -46,7 +46,7 @@ function computeDepths(tasks) {
   return memo;
 }
 
-export function buildGraph(tasks) {
+function buildGraph(tasks) {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const depths = computeDepths(tasks);
   const rowInCol = {};

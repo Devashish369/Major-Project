@@ -311,3 +311,13 @@ class TestMonotonicModel:
         assert 0.5 < m["roc_auc"] <= 1.0
         assert m["monotonic_constraints"]["remaining_ratio"] == 1 and m["monotonic_constraints"]["days_to_due"] == -1
         assert "SIMULATED" in m["training_data"].upper()
+
+
+# ── Task 3 (L-6): the benchmark endpoint also returns the estimator metrics ───
+
+def test_benchmark_includes_estimator_metrics_vs_baseline(client):
+    tok = register_and_token(client, "benchest")
+    d = client.get("/api/v1/ml/effort-benchmark", headers=auth(tok)).json()["data"]
+    est = d["estimator"]
+    assert est["model_tfidf_ridge"]["test"]["MAE"] < est["baseline_predict_median"]["test"]["MAE"]
+    assert "effort" in d and "risk" in d          # existing fields unchanged (additive change)

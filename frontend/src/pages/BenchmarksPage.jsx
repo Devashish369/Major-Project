@@ -14,7 +14,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, FlaskConical, Database, AlertTriangle, CheckCircle2,
-  BarChart3, Cpu, TrendingUp, Activity,
+  Cpu, TrendingUp, Activity,
 } from 'lucide-react';
 import { getBenchmarks } from '../api/benchmarks';
 
@@ -133,6 +133,9 @@ export default function BenchmarksPage() {
 
   const effort = data?.effort ?? {};
   const risk   = data?.risk   ?? {};
+  const estimator = data?.estimator ?? null;
+  const estTest = estimator?.model_tfidf_ridge?.test ?? {};
+  const estBase = estimator?.baseline_predict_median?.test ?? {};
   const sortedEffortFeatures = (effort.feature_importances_sorted || []).slice(0, 8);
   const sortedRiskFeatures   = (risk.feature_importances_sorted   || []).slice(0, 8);
 
@@ -317,9 +320,20 @@ export default function BenchmarksPage() {
           />
         </div>
 
+        {/* Held-out test-set metrics vs the predict-the-median baseline (story points) */}
+        {estTest.MAE != null && (
+          <div className="grid grid-cols-2 gap-3 mt-3">
+            <MetricCard label="Test MAE" value={estTest.MAE.toFixed(2)}
+              sub={`baseline ${estBase.MAE?.toFixed(2) ?? '—'} story points`} color="amber" />
+            <MetricCard label="Test MdAE" value={estTest.MdAE.toFixed(2)}
+              sub={`baseline ${estBase.MdAE?.toFixed(2) ?? '—'} story points`} color="amber" />
+          </div>
+        )}
+
         <p className="mt-4 text-xs text-slate-500">
           Metrics: See <code className="font-mono bg-slate-700 px-1 rounded">ml/artifacts/estimator_metrics.json</code>.
-          The model beats the predict-the-median baseline on both MAE and MdAE on the test set.
+          The model beats the predict-the-median baseline on both MAE and MdAE on the held-out test set
+          {estimator?.test_size ? ` (${estimator.test_size.toLocaleString()} issues)` : ''}, by a small margin.
           Estimates shown in the Plan tab are suggestions only – the LLM value is never overwritten.
         </p>
       </section>

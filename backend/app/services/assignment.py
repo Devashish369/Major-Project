@@ -34,8 +34,10 @@ Batching (spec §8.2):
 
 Edge cases:
   - No members → return empty list (caught at router level with 422).
-  - Member with zero capacity → k = 0 slots, skipped.
-  - More tasks than total slots → tasks beyond total_slots go unassigned.
+  - Member with zero capacity → no slots, skipped.
+  - Every task is always assigned: k = max(1, …) gives every member at least one slot
+    per batch (spec §8.2), so when everybody is full the task still goes to the best
+    candidate with availability 0 – the reason text shows this and the manager decides.
   - Task with no members who have matching skills → still assigned (lowest cost wins).
 """
 

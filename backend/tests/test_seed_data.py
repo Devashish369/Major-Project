@@ -28,3 +28,22 @@ def test_teams_decisions_and_expectations_reference_real_people():
         n = len(_parse_tasks(p["tasks"]))
         for _title, _dec, _why, by, idx, _days in p["decisions"]:
             assert by in USERS and (idx is None or 0 <= idx < n)
+
+
+def test_demo_password_can_be_set_by_environment(monkeypatch):
+    import importlib
+    import seed.demo_projects as dp
+    monkeypatch.setenv("DEMO_PASSWORD", "Another-Pass-123")
+    try:
+        assert importlib.reload(dp).DEMO_PASSWORD == "Another-Pass-123"
+    finally:
+        monkeypatch.delenv("DEMO_PASSWORD")
+        importlib.reload(dp)
+
+
+def test_bare_pytest_cannot_collect_the_live_llm_script():
+    from pathlib import Path
+    backend = Path(__file__).parent.parent
+    assert not (backend / "test_groq.py").exists()
+    assert not list((backend / "scripts").glob("test_*.py"))
+    assert not (backend / "app" / "ml").exists()

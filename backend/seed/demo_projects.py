@@ -27,6 +27,8 @@ Per-project tuning knobs (params):
 expect = (designed health level, (min, max) delay probability)
 """
 
+import os
+
 # ── 12 fictional users ───────────────────────────────────────────────────────
 # key: (full name, skills 1-5, on_time_rate)
 USERS = {
@@ -47,7 +49,8 @@ USERS = {
 # Extra login that is an admin of every project, so one account shows all 16.
 PRESENTER = ("demo@intellipm.demo", "demo", "Demo Presenter")
 DEMO_EMAIL_DOMAIN = "@intellipm.demo"
-DEMO_PASSWORD = "Demo@1234"
+# Override for a public deployment:  DEMO_PASSWORD="something-else" python -m seed.seed_demo
+DEMO_PASSWORD = os.environ.get("DEMO_PASSWORD", "Demo@1234")
 
 PROJECTS = [
     # ── 1 ─────────────────────────────────────────────────────────────────

@@ -188,6 +188,7 @@ they ship with the deploy; the ML libraries are pinned in `requirements.txt` to 
 cd backend
 $env:DATABASE_URL = "postgresql://...your Neon string..."
 $env:SECRET_KEY   = "any-non-default-value"      # only needed to satisfy the start-up check
+$env:DEMO_PASSWORD = "choose-a-new-password"   # optional: replaces the public Demo@1234 for this seed
 python -m seed.seed_demo --verify
 ```
 
@@ -249,7 +250,10 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 * **No sprint management screens** – sprints are created by applying an AI plan; the API has no sprint endpoints and the Board does not group by sprint.
 * **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
 * **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
-* **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, change `DEMO_PASSWORD` in `seed/demo_projects.py` before seeding a public deployment, and never put real data in that database.
+* **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, set the `DEMO_PASSWORD` environment variable when seeding a public deployment (see Deployment step D), and never put real data in that database.
+* **Permissions are coarse**: any project member may edit project details and add *regular* members; only admins can add admins, remove members, change roles, delete the project or apply AI plans/assignments.
+* **Work due today counts as late**: if a project's due date is today and any work is left, the forecast reports a 100 % chance of being late (late means "finishes after the due date").
+* **Single JavaScript bundle**: the production build is one ~900 kB chunk (no code splitting); fine on a laptop, slower on a weak connection.
 * **Free hosting**: Render's free tier sleeps when idle (30–60 s wake-up) and Neon's free tier may pause the database.
 
 ## API
