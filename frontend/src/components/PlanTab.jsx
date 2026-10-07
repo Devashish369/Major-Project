@@ -223,6 +223,7 @@ export default function PlanTab({ projectId, isAdmin }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks', projectId] });
       qc.invalidateQueries({ queryKey: ['project', projectId] });
+      qc.invalidateQueries({ queryKey: ['sprints', projectId] });
       setApplied(true);
       setApplyError('');
     },

@@ -7,7 +7,7 @@ Checked against the code and tests on 2026-10-06 and re-checked in the final rev
 
 | Spec | What exists instead |
 |---|---|
-| §7 Sprints API: `GET/POST /projects/{id}/sprints`, `PATCH/DELETE /sprints/{id}` (and `routers/sprints.py`) | Sprints are created only when an AI plan is applied (`POST /projects/{id}/apply-plan`). There are no sprint endpoints and no sprint screen; the Board does not group by sprint. |
+| §7 Sprints API: `GET/POST /projects/{id}/sprints`, `PATCH/DELETE /sprints/{id}` | Only `GET /projects/{id}/sprints` exists (with task_count / done_count). Sprints are created by applying an AI plan and can be listed and filtered; manual sprint editing is future scope. The Board has a sprint filter and sprint badges. |
 | §3 optional sentence-transformers embeddings (GPU optional) | Not used. The estimator is TF-IDF + Ridge only, as M6 required ("do not install sentence-transformers or PyTorch"). |
 | M14 "deployed" | The code, `render.yaml` and the deploy steps are done and the app is verified on PostgreSQL, but the actual Render + Neon deployment is a manual step for you (README → Deployment). |
 
@@ -57,6 +57,7 @@ These are behaviour changes made while fixing defects; quote the new behaviour.
 
 | Area | Now |
 |---|---|
+| Sprints (closing session) | Sprints are created by applying an AI plan and can be listed and filtered; manual sprint editing is future scope. |
 | Adding members | Any member may still add a regular member, but only an admin can add someone **as admin** (previously a member could add an admin account and then delete the project). |
 | SQLite | Foreign keys are enforced, so deleting a project removes its members, tasks, decisions and activity (as PostgreSQL always did). |
 | Risk model (closing session) | Retrained: every feature now affects the simulated label in a documented way; HistGradientBoosting with monotonic constraints; ROC-AUC and permutation importances reported. |

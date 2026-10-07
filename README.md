@@ -13,7 +13,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Area | What you can do | Where |
 |---|---|---|
 | Projects & team | Create projects, add members by e-mail, set roles, weekly capacity and 1–5 skill levels | Dashboard, Team tab, profile |
-| Kanban | Drag tasks between To do / In progress / Done, edit in a drawer, add dependencies (cycles rejected), full activity log | Board tab |
+| Kanban | Drag tasks between To do / In progress / Done, edit in a drawer, add dependencies (cycles rejected), filter by sprint, full activity log | Board tab |
 | AI planner | One sentence → draft plan (sprints, tasks, estimates, dependencies). Labelled "AI Generated" or "Cached Plan". Admin applies it. | Plan tab |
 | Estimate check | A model trained on 23,000 real Jira issues suggests hours next to the LLM's; large disagreements are flagged | Plan tab |
 | Assignment | Optimal task → person matching with a plain-English reason for every row | Team tab |
@@ -247,7 +247,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 * **Health weights are heuristics** (from the spec), not fitted to data.
 * **Assignment** assumes tasks are independent and does not model task order or context switching. Every task always receives a recommendation, even when everybody is already full; that person's availability then shows as 0 % in the reason, and the manager decides.
 * **Ask has no offline fallback**: without an LLM key, or with `USE_CACHED_PLAN_ONLY=true`, it returns a clear message instead of an answer. Answers are only as good as what was recorded in the tasks and decisions.
-* **No sprint management screens** – sprints are created by applying an AI plan; the API has no sprint endpoints and the Board does not group by sprint.
+* **Sprints are minimal** – sprints are created by applying an AI plan and can be listed and filtered; manual sprint editing is future scope. (`GET /projects/{id}/sprints` lists them with task counts; the Board has a sprint filter and a sprint badge on each card.)
 * **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
 * **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
 * **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, set the `DEMO_PASSWORD` environment variable when seeding a public deployment (see Deployment step D), and never put real data in that database.
@@ -271,6 +271,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 | Analytics | `GET /projects/{id}/analytics/health` · `/forecast` · `/workload` · `/burndown` · `GET /ml/effort-benchmark` |
 | Decisions | `GET/POST /projects/{id}/decisions` · `DELETE /decisions/{id}` |
 | Report | `GET /projects/{id}/report` (rule-based, no LLM) |
+| Sprints | `GET /projects/{id}/sprints` (read-only: name, dates, goal, task_count, done_count) |
 | Realtime | `WS /ws/projects/{id}?token=<JWT>` (members only) pushes `{type: task_created \| task_updated \| task_deleted, task}`; send the text `ping` to keep it alive |
 
 See [PROGRESS.md](./PROGRESS.md) for the build log, [DEMO_SCRIPT.md](./DEMO_SCRIPT.md) for the 10-minute demo, and [SPEC_DIFFERENCES.md](./SPEC_DIFFERENCES.md) for where the product differs from `PROJECT_SPEC.md`.

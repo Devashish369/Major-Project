@@ -128,6 +128,7 @@ from app.routers import assignments as assign_router  # noqa: E402
 from app.routers import analytics as analytics_router  # noqa: E402
 from app.routers import decisions as decisions_router  # noqa: E402
 from app.routers import report as report_router  # noqa: E402
+from app.routers import sprints as sprints_router  # noqa: E402
 from app.routers import ws as ws_router  # noqa: E402
 
 app.include_router(auth_router.router,       prefix="/api/v1")
@@ -139,6 +140,7 @@ app.include_router(assign_router.router,     prefix="/api/v1")
 app.include_router(analytics_router.router,  prefix="/api/v1")
 app.include_router(decisions_router.router,  prefix="/api/v1")
 app.include_router(report_router.router,     prefix="/api/v1")
+app.include_router(sprints_router.router,    prefix="/api/v1")
 app.include_router(ws_router.router)   # WS /ws/projects/{id} (no /api/v1 prefix, per spec)
 
 # ── Health endpoint ───────────────────────────────────────────────────────────

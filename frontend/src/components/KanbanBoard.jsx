@@ -25,9 +25,10 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { updateTask } from '../api/tasks';
+import { listSprints } from '../api/sprints';
 import TaskDrawer from './TaskDrawer';
 import CreateTaskModal from './CreateTaskModal';
 
@@ -44,7 +45,7 @@ const PRIORITY_LEFT = {
 };
 
 // ── Sortable Task Card ────────────────────────────────────────────────────────
-function TaskCard({ task, onClick }) {
+function TaskCard({ task, onClick, sprintName }) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging: localDragging,
@@ -71,7 +72,12 @@ function TaskCard({ task, onClick }) {
         {task.title}
       </p>
       <div className="flex items-center justify-between text-xs text-slate-500">
-        <span>#{task.id}</span>
+        <span className="flex items-center gap-1.5">
+          #{task.id}
+          {sprintName && (
+            <span className="sprint-badge rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300">{sprintName}</span>
+          )}
+        </span>
         <div className="flex items-center gap-2">
           {task.estimate_hours && <span>{task.estimate_hours}h</span>}
           {task.due_date && <span>{task.due_date}</span>}
@@ -92,7 +98,7 @@ function TaskCard({ task, onClick }) {
 }
 
 // ── Column ────────────────────────────────────────────────────────────────────
-function Column({ column, tasks, onCardClick, onAddTask }) {
+function Column({ column, tasks, onCardClick, onAddTask, sprintNames }) {
   const Icon = column.icon;
   return (
     <div className={`flex flex-col min-h-[400px] rounded-xl border border-slate-700 bg-slate-800/50 border-t-4 ${column.color}`}>
@@ -117,7 +123,7 @@ function Column({ column, tasks, onCardClick, onAddTask }) {
       <div className="flex-1 p-3 space-y-2">
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={onCardClick} />
+            <TaskCard key={task.id} task={task} onClick={onCardClick} sprintName={sprintNames[task.sprint_id]} />
           ))}
         </SortableContext>
       </div>
@@ -131,6 +137,16 @@ export default function KanbanBoard({ tasks, projectId }) {
   const [activeTask, setActiveTask] = useState(null);
   const [selectedTask, setSelectedTask] = useState(null);
   const [createStatus, setCreateStatus] = useState(null); // column id to create into
+  const [sprintFilter, setSprintFilter] = useState('all');  // 'all' | 'none' | sprint id
+
+  // Sprints come from applied AI plans (read-only list); used for the filter and card badges
+  const { data: sprints = [] } = useQuery({
+    queryKey: ['sprints', projectId],
+    queryFn: () => listSprints(projectId),
+  });
+  const sprintNames = Object.fromEntries(sprints.map((s) => [s.id, s.name]));
+  const visibleTasks = tasks.filter((t) =>
+    sprintFilter === 'all' ? true : sprintFilter === 'none' ? !t.sprint_id : t.sprint_id === Number(sprintFilter));
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -168,7 +184,7 @@ export default function KanbanBoard({ tasks, projectId }) {
     moveMut.mutate({ taskId: draggedTask.id, status: targetStatus });
   }
 
-  const tasksByCol = (colId) => tasks.filter((t) => t.status === colId);
+  const tasksByCol = (colId) => visibleTasks.filter((t) => t.status === colId);
 
   // When task drawer edits complete, refresh selected task from latest tasks list
   const latestSelected = selectedTask
@@ -183,6 +199,19 @@ export default function KanbanBoard({ tasks, projectId }) {
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
+        {sprints.length > 0 && (
+          <div className="mb-3 flex items-center gap-2 text-sm">
+            <label htmlFor="sprint-filter" className="text-slate-400">Sprint</label>
+            <select id="sprint-filter" value={sprintFilter} onChange={(e) => setSprintFilter(e.target.value)}
+              className="rounded-lg border border-slate-600 bg-slate-900 px-2 py-1 text-sm text-white outline-none focus:border-indigo-500">
+              <option value="all">All sprints</option>
+              {sprints.map((s) => (
+                <option key={s.id} value={s.id}>{s.name} ({s.done_count}/{s.task_count} done)</option>
+              ))}
+              <option value="none">No sprint</option>
+            </select>
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-4">
           {COLUMNS.map((col) => (
             <Column
@@ -191,6 +220,7 @@ export default function KanbanBoard({ tasks, projectId }) {
               tasks={tasksByCol(col.id)}
               onCardClick={(t) => setSelectedTask(t)}
               onAddTask={(status) => setCreateStatus(status)}
+              sprintNames={sprintNames}
             />
           ))}
         </div>
