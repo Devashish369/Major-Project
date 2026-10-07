@@ -299,3 +299,50 @@ class TestPlannerPostprocessing:
             result = generate_plan("Build something", 3, 8)
         assert result["source"] == "fallback"
         assert len(result["plan"]["tasks"]) > 0
+
+
+# ── Review fix M-1 + atomicity: apply-plan re-validates the body and is all-or-nothing ──
+
+class TestApplyPlanHardening:
+    def test_cyclic_oversized_plan_is_cleaned_and_forecast_still_works(self, client):
+        tok = register(client, "hard@a.com", "hard")
+        pid = create_project(client, tok)
+        bad = {"project_title": "x", "sprints": [{"name": "S1"}],
+               "tasks": [{"title": "A", "estimate_hours": 999, "depends_on": ["B", "Ghost"]},
+                         {"title": "B", "estimate_hours": 0, "depends_on": ["A"]}]
+                        + [{"title": f"T{i}"} for i in range(50)]}
+        r = client.post(f"/api/v1/projects/{pid}/apply-plan", json={"plan": bad}, headers=auth(tok))
+        assert r.status_code == 201
+        assert r.json()["data"]["tasks_created"] == 40                      # capped
+        tasks = {t["title"]: t for t in client.get(f"/api/v1/projects/{pid}/tasks", headers=auth(tok)).json()["data"]}
+        assert tasks["A"]["estimate_hours"] == 40 and tasks["B"]["estimate_hours"] == 1
+        a_deps, b_deps = set(tasks["A"]["dependencies"]), set(tasks["B"]["dependencies"])
+        assert not (tasks["B"]["id"] in a_deps and tasks["A"]["id"] in b_deps)   # cycle broken
+        assert client.get(f"/api/v1/projects/{pid}/analytics/forecast", headers=auth(tok)).status_code == 200
+
+    def test_plan_without_task_title_is_422_not_500(self, client):
+        tok = register(client, "hard2@a.com", "hard2")
+        pid = create_project(client, tok)
+        r = client.post(f"/api/v1/projects/{pid}/apply-plan", json={"plan": {"tasks": [{"estimate_hours": 3}]}}, headers=auth(tok))
+        assert r.status_code == 422 and r.json()["success"] is False
+
+    def test_failure_midway_saves_nothing(self, client, monkeypatch):
+        import app.routers.ai as ai_router
+        tok = register(client, "hard3@a.com", "hard3")
+        pid = create_project(client, tok)
+
+        def boom(*a, **k):                      # fails AFTER sprints + tasks were flushed
+            raise RuntimeError("disk full")
+        monkeypatch.setattr(ai_router, "write_activity", boom)
+        nofail = TestClient(app, raise_server_exceptions=False)
+        r = nofail.post(f"/api/v1/projects/{pid}/apply-plan", json={"plan": json.loads(MOCK_PLAN_JSON)}, headers=auth(tok))
+        assert r.status_code == 500
+        assert client.get(f"/api/v1/projects/{pid}/tasks", headers=auth(tok)).json()["data"] == []
+
+
+# ── Review fix M-4: no hidden SDK retries on top of our own retry/fallback logic ──
+
+def test_llm_client_does_not_retry_by_itself():
+    from app.services.llm import _make_client
+    client = _make_client("https://example.invalid/v1", "k")
+    assert client.max_retries == 0

@@ -60,13 +60,14 @@ const WORKLOAD_CONFIG = {
 
 function WorkloadBar({ utilization, label }) {
   const cfg = WORKLOAD_CONFIG[label] || WORKLOAD_CONFIG.available;
-  const pct = Math.min(100, Math.round(utilization * 100));
+  const realPct = Math.round(utilization * 100);   // shown as-is, e.g. 194%
+  const pct = Math.min(100, realPct);                // bar width only
   return (
     <div className="mt-3">
       <div className="flex justify-between items-center mb-1">
         <span className="text-xs text-slate-400">Workload</span>
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-300">{pct}%</span>
+          <span className="text-xs text-slate-300">{realPct}%</span>
           <span className={`text-xs px-1.5 py-0.5 rounded border ${cfg.badge} font-medium`}>
             {cfg.text}
           </span>

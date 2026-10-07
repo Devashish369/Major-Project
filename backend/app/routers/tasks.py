@@ -32,6 +32,19 @@ from app.services.realtime import emit_task_deleted, emit_tasks
 router = APIRouter(tags=["tasks"])
 
 
+def _check_assignee(db: Session, project_id: int, assignee_id) -> None:
+    """An assignee must be a member of the task's project (else 422)."""
+    if assignee_id is None:
+        return
+    member = db.execute(
+        select(ProjectMember.id).where(
+            ProjectMember.project_id == project_id, ProjectMember.user_id == assignee_id
+        )
+    ).first()
+    if member is None:
+        raise HTTPException(status_code=422, detail="The assignee must be a member of this project.")
+
+
 # ── Helper: build TaskOut dict with dependency list ───────────────────────────
 
 def _task_out(task: Task, db: Session) -> dict:
@@ -99,6 +112,7 @@ def create_task(
 ):
     """Create a task. Any project member may create tasks."""
     _get_project_membership(project_id, current_user, db)
+    _check_assignee(db, project_id, body.assignee_id)
 
     task = Task(
         project_id=project_id,
@@ -181,6 +195,7 @@ def update_task(
 
     # Assignee change
     if body.assignee_id is not None and body.assignee_id != task.assignee_id:
+        _check_assignee(db, task.project_id, body.assignee_id)
         meta["assignee_id"] = body.assignee_id
         task.assignee_id = body.assignee_id
     elif "assignee_id" in body.model_fields_set and body.assignee_id is None:

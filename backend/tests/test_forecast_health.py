@@ -482,3 +482,45 @@ class TestBurndown:
         pid = make_project(client, a)
         r = client.get(f"/api/v1/projects/{pid}/analytics/burndown", headers=auth(b))
         assert r.status_code == 404
+
+
+# ── Review fix M-2: percentile dates agree with delay_probability ─────────────
+
+class TestForecastDateConsistency:
+    def test_dates_and_delay_probability_never_contradict(self):
+        today = date(2026, 10, 8)
+        for n_tasks, due_days in [(1, 0), (5, 3), (10, 7), (12, 20), (20, 15), (8, 9)]:
+            due = (today + timedelta(days=due_days)).isoformat()
+            r = run_forecast(open_tasks=[{"id": i, "estimate_hours": 8 + i} for i in range(n_tasks)],
+                             completed_tasks=[], dependencies=[], capacity_per_week=[30, 25],
+                             due_date=due, today=today)
+            p = r["delay_probability"]
+            if r["p90"] <= due:
+                assert p <= 0.10 + 1e-9, (n_tasks, due_days, r["p90"], p)
+            if r["p50"] > due:
+                assert p >= 0.5, (n_tasks, due_days, r["p50"], p)
+            if r["p50"] <= due:
+                assert p <= 0.5 + 1e-9, (n_tasks, due_days, r["p50"], p)
+
+    def test_open_work_never_finishes_in_the_past_or_today(self):
+        today = date(2026, 10, 8)
+        r = run_forecast(open_tasks=[{"id": 1, "estimate_hours": 1}], completed_tasks=[], dependencies=[],
+                         capacity_per_week=[40] * 5, due_date="2026-10-08", today=today)
+        assert r["p50"] > today.isoformat() and r["delay_probability"] == 1.0
+
+
+# ── Review fix M-3: health overload uses the same utilisation as the workload bars ──
+
+class TestHealthWorkloadConsistency:
+    def test_project_due_in_two_days(self, client):
+        tok = register_and_token(client, "cons1")
+        due = (date.today() + timedelta(days=2)).isoformat()
+        pid = client.post("/api/v1/projects", json={"title": "Soon", "due_date": due}, headers=auth(tok)).json()["data"]["id"]
+        me = client.get("/api/v1/auth/me", headers=auth(tok)).json()["data"]["id"]
+        client.post(f"/api/v1/projects/{pid}/tasks", json={"title": "x", "estimate_hours": 10, "assignee_id": me}, headers=auth(tok))
+        health = client.get(f"/api/v1/projects/{pid}/analytics/health", headers=auth(tok)).json()["data"]
+        workload = client.get(f"/api/v1/projects/{pid}/analytics/workload", headers=auth(tok)).json()["data"]
+        listed = [p for p in client.get("/api/v1/projects", headers=auth(tok)).json()["data"] if p["id"] == pid][0]
+        assert health["diagnostics"]["max_utilization"] == pytest.approx(max(w["utilization"] for w in workload), abs=1e-3)
+        assert health["penalties"]["overload"] == 0          # 10 h of work vs 30 h/week is not overload
+        assert listed["health_score"] == health["health_score"]

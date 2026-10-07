@@ -1,7 +1,7 @@
 # Where the product differs from PROJECT_SPEC.md
 
 Use this list when you update the deck and report so they describe what was actually built.
-Checked against the code and tests on 2026-10-06 (211 tests passing).
+Checked against the code and tests on 2026-10-06 and re-checked in the final review on 2026-10-08 (226 tests pass + 1 expected failure documenting a known model defect; same result on PostgreSQL).
 
 ## 1. In the spec but NOT built
 
@@ -43,8 +43,25 @@ Checked against the code and tests on 2026-10-06 (211 tests passing).
 | Item | Value | Honest reading |
 |---|---|---|
 | Estimator (TF-IDF + Ridge), 23,313 Jira issues, held-out test set (4,671) | MAE **3.14** vs median baseline **3.26** story points; MdAE 1.89 vs 2.00 | Small but real improvement; story points are noisy. |
-| Risk classifier (gradient boosting), 4,000 **simulated** snapshots | accuracy 93.4 %, precision 92.1 %, recall 91.2 % | Agreement with the simulator, **not** real-world accuracy. One feature (`remaining_ratio`) carries 83 % of the importance. |
+| Risk classifier (gradient boosting), 4,000 **simulated** snapshots | accuracy 93.4 %, precision 92.1 %, recall 91.2 % | Agreement with the simulator, **not** real-world accuracy. The label is computed from (almost) one feature, `remaining_ratio` (83 % of the importance), plus 8 % random flips, so ~92 % is the ceiling. Call the ML card **experimental**. |
 | NASA93 effort benchmark (gradient boosting), 93 real projects, 5-fold CV | MAE ≈ 308 person-months, R² **0.27 ± 0.63** | Weak and unstable, as expected with 93 heterogeneous projects. Present it as a benchmark of the method. |
 | Forecast | 5,000 Monte Carlo runs, seeded; overrun default log-normal(μ=0.10, σ=0.35), learned from the project if ≥ 10 finished tasks have actual hours | |
-| Tests | 211 pytest tests (SQLite in memory; the suite also passes on PostgreSQL) | |
+| Tests | 226 pytest tests pass + 1 xfail (SQLite in memory and PostgreSQL) | The xfail documents the risk-model defect H-6 in REVIEW_REPORT.md |
 | Demo data | 12 users, 16 projects, 252 tasks, ~55 dependencies, ~900 activity rows, 28 decisions; 16/16 stories verified | |
+
+## 5. Changed by the final review (2026-10-08)
+
+These are behaviour changes made while fixing defects; quote the new behaviour.
+
+| Area | Now |
+|---|---|
+| Adding members | Any member may still add a regular member, but only an admin can add someone **as admin** (previously a member could add an admin account and then delete the project). |
+| SQLite | Foreign keys are enforced, so deleting a project removes its members, tasks, decisions and activity (as PostgreSQL always did). |
+| Risk model inputs | Built with the training definitions (`remaining_ratio` = remaining hours ÷ available hours until due; average – not max – utilisation). Projects with no open work show 0 %. "Top factors" are computed per project. |
+| Risk card wording | "Delay risk (ML, experimental) – trained on SIMULATED projects; the Monte Carlo forecast is the primary estimate". |
+| Forecast dates | P50/P80/P90 dates are rounded up to whole days, so they always agree with the delay probability. |
+| Health overload | Uses the same utilisation as the workload bars (at least one week remaining). |
+| Workload bars | Show the real percentage (e.g. 194 %); only the bar length is capped. |
+| `apply-plan` | Re-validates the submitted plan exactly like a generated one (estimates 1–40 h, max 40 tasks, cycles broken); an invalid plan returns 422. |
+| Task assignee | Must be a member of the project (422 otherwise). |
+| LLM calls | No hidden SDK retries; the planner/Ask retry and fall back themselves, so a bad network reaches the cached plan sooner. |

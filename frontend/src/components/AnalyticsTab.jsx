@@ -98,7 +98,9 @@ function HealthCard({ query }) {
 
 function RiskCard({ query }) {
   return (
-    <Card title="Delay risk (ML)" subtitle="Classifier trained on simulated projects" query={query}
+    <Card title="Delay risk (ML, experimental)"
+      subtitle="Classifier trained on SIMULATED projects – indicative only; the Monte Carlo forecast is the primary estimate"
+      query={query}
       isEmpty={(d) => !d?.risk || d.diagnostics.open_tasks + d.diagnostics.done_tasks === 0}
       emptyText="Add tasks to see a delay-risk estimate.">
       {(d) => {
@@ -108,7 +110,9 @@ function RiskCard({ query }) {
           <div>
             <p className={`text-5xl font-bold ${color}`}>{Math.round(p * 100)}%</p>
             <p className="text-xs text-slate-400 mb-4">probability of finishing late · {d.risk.risk_level} risk</p>
-            <p className="text-xs text-slate-400 mb-1.5">Top contributing factors</p>
+            <p className="text-xs text-slate-400 mb-1.5">
+              {d.risk.top_factors?.length ? 'Top contributing factors for this project' : d.risk.data_note}
+            </p>
             <ul className="space-y-1">
               {(d.risk.top_factors || []).map((f) => (
                 <li key={f.feature} className="flex justify-between text-xs text-slate-300">

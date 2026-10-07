@@ -39,6 +39,10 @@ def _make_client(base_url: str, api_key: str) -> OpenAI:
     return OpenAI(
         base_url=base_url,
         api_key=api_key,
+        # The SDK silently retries twice by default.  Our callers (planner, Ask) already
+        # decide when to retry and when to fall back, so SDK retries would only multiply
+        # the waiting time on a bad network (up to several minutes before the cached plan).
+        max_retries=0,
     )
 
 

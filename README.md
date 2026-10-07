@@ -20,7 +20,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Workload | Utilisation bars: overloaded / at risk / healthy / available | Team + Analytics tabs |
 | Forecast | Monte Carlo P50 / P80 / P90 finish dates and probability of missing the due date | Analytics tab |
 | Health score | 0–100 with the four penalties that explain it; Low / Medium / High risk badge on every dashboard card | Analytics tab, Dashboard |
-| Delay risk (ML) | Probability of finishing late with the top contributing factors | Analytics tab |
+| Delay risk (ML, experimental) | Probability of finishing late with the factors that drive it for this project. Trained on **simulated** data and labelled experimental in the UI; the Monte Carlo forecast is the primary estimate | Analytics tab |
 | Burndown | Ideal vs actual remaining hours per day | Analytics tab |
 | Dependency graph | One node per task, blocked tasks in red, click to open the task | Graph tab |
 | Live updates | When a teammate creates, edits, moves or deletes a task, your Board and Graph update without a refresh (small "Live" badge; falls back to normal REST if the socket is unavailable) | Board / Graph tabs |
@@ -151,7 +151,7 @@ python -m seed.seed_demo --verify
 
 ```bash
 cd backend
-python -m pytest tests -q                                                        # SQLite, in memory (197 tests)
+python -m pytest tests -q                                                        # SQLite, in memory: 226 pass + 1 expected failure (xfail) that documents a known risk-model defect
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
 
@@ -211,14 +211,14 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 
 **Workload** (`services/workload.py`). `utilisation = open estimated hours assigned ÷ (weekly capacity × weeks until the due date)`. Over 100% = overloaded, 80–100% at risk, 40–80% healthy, under 40% available.
 
-**Forecast** (`services/forecast.py`). A Monte Carlo simulation, 5,000 runs. In each run every open task's real duration is its estimate × a log-normal random overrun (default: typically about 10% over, with realistic spread; if the project has ≥10 finished tasks with actual hours, the overrun is learned from them instead). A run's duration is the larger of (a) total sampled hours ÷ the team's productive hours per day (capacity × 0.7 focus factor) and (b) the longest chain of dependent tasks done one after another by one person. The 50th/80th/90th percentiles of the 5,000 durations are the P50/P80/P90 dates, and the share of runs finishing after the due date is the *delay probability*. The random generator is seeded so results are reproducible.
+**Forecast** (`services/forecast.py`). A Monte Carlo simulation, 5,000 runs. In each run every open task's real duration is its estimate × a log-normal random overrun (default: typically about 10% over, with realistic spread; if the project has ≥10 finished tasks with actual hours, the overrun is learned from them instead). A run's duration is the larger of (a) total sampled hours ÷ the team's productive hours per day (capacity × 0.7 focus factor) and (b) the longest chain of dependent tasks done one after another by one person. The 50th/80th/90th percentiles of the 5,000 durations are the P50/P80/P90 dates (rounded up to whole days, so a P90 on or before the due date always means at most a 10 % chance of being late), and the share of runs finishing after the due date is the *delay probability*. The random generator is seeded so results are reproducible.
 
 **Health score** (`services/health.py`).
-`health = 100 − 30·overdue − 20·blocked − 15·overload − 35·slip`, clipped to 0–100, where *overdue* = share of open tasks past due, *blocked* = share of open tasks with an unfinished dependency, *overload* = how far the busiest person is over 100%, *slip* = how far real progress (done hours ÷ total hours) lags the elapsed share of the schedule (full penalty at 30 points behind). 75+ Low risk, 50–74 Medium, below 50 High. The four penalties are returned so the UI can show *why*.
+`health = 100 − 30·overdue − 20·blocked − 15·overload − 35·slip`, clipped to 0–100, where *overdue* = share of open tasks past due, *blocked* = share of open tasks with an unfinished dependency, *overload* = how far the busiest person is over 100% (the same utilisation the workload bars show), *slip* = how far real progress (done hours ÷ total hours) lags the elapsed share of the schedule (full penalty at 30 points behind). 75+ Low risk, 50–74 Medium, below 50 High. The four penalties are returned so the UI can show *why*.
 
 **Estimate model** (`ml/train_estimator.py`, `services/estimator.py`). TF-IDF features of a task's title + description feed a Ridge regression trained on ~23,000 real Jira issues with story points (16 open-source projects; the dataset's own train/validation/test split). On the held-out test set it has MAE 3.14 story points vs 3.26 for always predicting the median, i.e. a small but real improvement; story-point text is inherently noisy. Hours = story points × `HOURS_PER_STORY_POINT`. It is shown *next to* the LLM's estimate and never overwrites it.
 
-**Delay-risk classifier** (`ml/generate_synthetic.py`, `ml/train_risk.py`). A gradient-boosting classifier takes 8 project features (team size, utilisation, overdue/blocked ratios, slip, remaining/done ratio, days to due) and outputs the probability of being late plus its top 3 factors. **It is trained on 4,000 simulated projects**, labelled by running the Monte Carlo on each snapshot plus noise, because no public data set of project snapshots exists. Its 93% accuracy therefore measures agreement with the simulator, not real-world accuracy; the UI and Benchmarks page say so.
+**Delay-risk classifier – experimental** (`ml/generate_synthetic.py`, `ml/train_risk.py`, `services/risk.py`). A gradient-boosting classifier takes 8 project features (team size, average utilisation, overdue/blocked ratios, slip, *remaining_ratio* = remaining hours ÷ team hours available until the due date, done ratio, days to due) and outputs the probability of being late. The "top factors" are computed **per project**: each feature is replaced by its typical training value and the probability recomputed; the features that move it most are shown. **It is trained on 4,000 simulated projects**, because no public data set of project snapshots exists. Be precise about what that means: each label is computed from remaining work vs. capacity (essentially `remaining_ratio > 1`) plus 8 % random flips, so the model mostly re-learns that one rule – it has 83 % of the importance, and the 93 % accuracy is close to the 92 % ceiling set by the flips. It is a learned shortcut of the simulation, not independent evidence, and it does not see dependency chains or learned overruns, so it can disagree with the Monte Carlo forecast (the primary estimate). It is also unstable on inputs at the edge of the simulated data (for example a project where nothing is assigned yet).
 
 **Effort benchmark** (`ml/train_effort.py`). A gradient-boosting regressor on the public NASA93 COCOMO data (93 projects, ratings very-low … extra-high mapped to 0–5), reported with 5-fold cross-validated MAE and R². It is a benchmark of the method, not part of day-to-day project scoring. The result is **weak and unstable** (CV R² 0.27 ± 0.63, MAE ≈ 308 person-months on efforts that range from a few to over 8,000), which is expected with only 93 heterogeneous projects, and is reported as is.
 
@@ -238,16 +238,17 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 
 ## Known limitations
 
-* **The risk classifier is trained on simulated data** (disclosed in the UI). Its accuracy is agreement with the simulator, not proof it predicts real projects.
+* **The risk classifier is experimental**: trained on simulated data whose labels come from (almost) one of its own features, so its accuracy is not evidence of real-world performance; it ignores dependency chains, and it gives implausible values on some edge inputs (e.g. ~99 % for a tiny project with nothing assigned yet). The UI labels it experimental and the Monte Carlo forecast is the primary estimate. A retrain is proposed in `REVIEW_REPORT.md` (H-6).
 * **The estimate model is a modest improvement over the median** (MAE 3.14 vs 3.26 story points). It is a sanity check for the LLM, not a replacement.
 * **The NASA93 effort benchmark is weak** (CV R² 0.27 ± 0.63): 93 projects are too few and too varied for an accurate model. It demonstrates the method on public data; it does not drive any score.
 * **Forecast simplifications**: team throughput is capacity × 0.7 spread evenly (no individual calendars, holidays or skills); simulated "days" are converted straight to calendar days, which makes forecasts somewhat conservative (late). Tasks without estimates default to 4 h.
 * **Health weights are heuristics** (from the spec), not fitted to data.
-* **Assignment** assumes tasks are independent and does not model task order or context switching.
+* **Assignment** assumes tasks are independent and does not model task order or context switching. Every task always receives a recommendation, even when everybody is already full; that person's availability then shows as 0 % in the reason, and the manager decides.
 * **Ask has no offline fallback**: without an LLM key, or with `USE_CACHED_PLAN_ONLY=true`, it returns a clear message instead of an answer. Answers are only as good as what was recorded in the tasks and decisions.
 * **No sprint management screens** – sprints are created by applying an AI plan; the API has no sprint endpoints and the Board does not group by sprint.
 * **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
 * **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
+* **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, change `DEMO_PASSWORD` in `seed/demo_projects.py` before seeding a public deployment, and never put real data in that database.
 * **Free hosting**: Render's free tier sleeps when idle (30–60 s wake-up) and Neon's free tier may pause the database.
 
 ## API

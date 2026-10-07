@@ -64,7 +64,7 @@ def list_members(
 def add_member(
     project_id: int,
     body: MemberAdd,
-    _membership=Depends(get_membership),   # any member may add
+    _membership=Depends(get_membership),   # any member may add regular members
     db: Session = Depends(get_db),
 ):
     """
@@ -73,7 +73,12 @@ def add_member(
     Returns 404 if the email doesn't exist (don't reveal whether email is
     registered to an anonymous caller – only members reach this endpoint).
     Returns 409 if already a member.
+    Returns 403 if a non-admin tries to add someone as admin.
     """
+    # Granting the admin role is admin-only.  Otherwise a plain member could add an
+    # account they control as "admin" and then delete the project or remove people.
+    if body.role == "admin" and _membership.role != "admin":
+        raise HTTPException(status_code=403, detail="Only a project admin can add another admin.")
     # Look up user by email
     user = db.execute(
         select(User).where(User.email == body.email)
