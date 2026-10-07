@@ -148,3 +148,48 @@ git push origin main
 ```
 
 `PROGRESS.md` has a session-log row for this review (2026-10-08).
+
+---
+
+## Addendum – closing session (2026-10-08)
+
+### Updated verdict: **YES**
+The product now matches its aim:
+- Every aim point works and is tested.
+- The project report promised by the synopsis exists (M16).
+- Sprints can be listed and filtered.
+- The ML risk model behaves monotonically and is disclosed as experimental and secondary to the Monte Carlo forecast.
+
+What remains is human work: deploying, live checks on the deployed URL, rehearsal, and editing the deck and synopsis. No known bugs are open.
+
+### Status of the open items
+
+| id | item | status | commit |
+|---|---|---|---|
+| C-1 … M-6 | review fixes | FIXED | 77f9db8 |
+| H-6 | risk model erratic | **FIXED**: every feature drives the simulated label; HistGradientBoosting with monotonic constraints; monotonic sweep tests replace the xfail. Accuracy 92.8 %, ROC-AUC 0.93 (against the simulation); ML/Monte Carlo bands agree on **12/16** demo projects (was 5/16, then 9/16) | fc1f0d2 |
+| M-7 | sprint endpoints / screens | **FIXED (minimal, as approved)**: read-only `GET /projects/{id}/sprints` with counts, Board sprint filter and badges; manual sprint editing is future scope | 5381748 |
+| P13 | "reports" (synopsis objective 5) | **FIXED**: M16 `GET /projects/{id}/report` + printable Report tab, rule-based, no LLM | 117fa54 |
+| L-1 | assignment docstring | FIXED | 6d61d8a |
+| L-2 | vacuous `or True` test | FIXED (real assertion) | fc1f0d2 |
+| L-3 | lint warnings | FIXED (16 → 0) | 6d61d8a |
+| L-4 | live-LLM script collectable by pytest | FIXED (`backend/scripts/check_llm_connection.py`) | 6d61d8a |
+| L-5 | non-admins may edit project details / add regular members | OPEN by design – documented in README limitations | 6d61d8a |
+| L-6 | estimator numbers missing on Benchmarks | FIXED | 6d61d8a |
+| L-7 | single 890 kB bundle | OPEN – documented in README limitations | 6d61d8a |
+| L-8 | empty `backend/app/ml/` | FIXED (removed) | 6d61d8a |
+| L-9 | work due today counts as late | OPEN by definition – documented | 6d61d8a |
+| – | deployment preflight (Neon URL test, prod-build URL check, DEPLOY_CHECKLIST.md) | DONE | dd7d0f3 |
+| – | testing report, screenshots, deck/synopsis fixes, viva Q&A | DONE | 7aed470, b5bf180, a11f550 |
+
+### HUMAN MUST CHECK – updated
+Done since the review: the **dependency-graph edges** are now visible in `docs/screenshots/07_graph.png`.
+
+Still to do:
+1. Deploy.
+2. Live-LLM click-through in the UI.
+3. Two-window live updates over `wss` on the deployed URL.
+4. Print preview of a report on paper/PDF.
+5. Timed rehearsal.
+6. Licence check of the Jira CSVs.
+7. Deck and synopsis edits.

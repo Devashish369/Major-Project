@@ -152,7 +152,7 @@ python -m seed.seed_demo --verify
 
 ```bash
 cd backend
-python -m pytest tests -q                                                        # SQLite, in memory: 226 pass + 1 expected failure (xfail) that documents a known risk-model defect
+python -m pytest tests -q                                                        # SQLite, in memory: 255 tests
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
 

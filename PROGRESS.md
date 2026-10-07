@@ -5,10 +5,10 @@
 
 ## Current status
 
-- **Current module:** M13 ☑ DONE (built after M15 at the user's request; 211 tests green). M14 deploy is still a HUMAN step (README 'Deployment' A-E). Everything M0-M15 is built; remaining work is human: deploy, rehearse, deck, Oct 14 review.
-- **Last session:** 2026-10-06 / Claude Code / M13 WebSocket live updates
-- **Known bugs:** see REVIEW_REPORT.md – open: H-6 (risk model unreliable on some inputs; experimental label + demo guidance in place), M-7 (no sprint endpoints/screens). Both need approval before any new code.
-- **Next step:** (human) deploy per README 'Deployment' A-E, rehearse DEMO_SCRIPT.md, update the deck from SPEC_DIFFERENCES.md; Oct 14 Opus review with the checklist below (fix only real bugs).
+- **Current module:** ALL modules M0–M16 built (M16 project report added in the closing session). 255 tests green on SQLite and PostgreSQL; seed 16/16; frontend build OK, 0 lint warnings. Only human steps remain (deploy, rehearsal, deck).
+- **Last session:** 2026-10-08 / Claude Code / closing session (Tasks 0–9, see 'Closing session' below)
+- **Known bugs:** none open. Known limitations (not bugs) are listed in README 'Known limitations'; the ML risk signal is experimental and agrees with the Monte Carlo band on 12/16 demo projects.
+- **Next step (human only):** deploy with DEPLOY_CHECKLIST.md; live-LLM click-through and two-window wss check on the deployed URL; print preview of a report; timed rehearsal of DEMO_SCRIPT.md; licence check of the Jira CSVs; rotate API keys if ever shared; set a new DEMO_PASSWORD for the public seed; edit deck and synopsis per docs/DECK_AND_SYNOPSIS_FIXES.md; fill the UAT table in docs/TESTING_REPORT.md.
 - **Rebuild demo data (one command, from `backend/`):** `python -m seed.seed_demo --verify`  → login `demo@intellipm.demo` / `Demo@1234` (add `--attach your@email` to also add your own account)
 
 ## Module checklist
@@ -79,8 +79,8 @@ Resume rule: continue at the first task that is not DONE.
 | 5 Deployment preflight | DONE | dd7d0f3 | Neon URL test (sslmode + channel_binding, both prefixes); prod build with dummy VITE_API_BASE_URL contains it and no localhost; runtime files tracked; render.yaml OK (no change); DEPLOY_CHECKLIST.md written |
 | 6 Testing report | DONE | 7aed470 | docs/TESTING_REPORT.md from fresh runs: 255 tests SQLite + Postgres 18.4, seed 16/16, ML metrics, failure modes i-iv re-run, permission matrix 47/47, defect table, manual UAT table |
 | 7 Screenshots | DONE | b5bf180 | Playwright driving the installed Microsoft Edge (Chromium download timed out); 10 PNGs at 1600x900 in docs/screenshots, cached-plan mode; graph edges visible |
-| 8 Deck / synopsis fixes + viva Q&A | DONE | (see git log: 'Task 8') | docs/DECK_AND_SYNOPSIS_FIXES.md (synopsis checked claim by claim; deck PDF not in repo, deck rows from the user's list) and docs/VIVA_QA.md (20 Q&A); originals untouched |
-| 9 Final verification | TODO | | |
+| 8 Deck / synopsis fixes + viva Q&A | DONE | a11f550 | docs/DECK_AND_SYNOPSIS_FIXES.md (synopsis checked claim by claim; deck PDF not in repo, deck rows from the user's list) and docs/VIVA_QA.md (20 Q&A); originals untouched |
+| 9 Final verification | DONE | (this commit: 'Task 9') | 255 passed SQLite + 255 passed Postgres; seed 16/16; build OK; lint 0; failure modes cached-only + bad key OK; REVIEW_REPORT addendum; counts and endpoint lists in README/SPEC_DIFFERENCES updated |
 
 ## Human checklist (do these yourself, not the AI)
 
