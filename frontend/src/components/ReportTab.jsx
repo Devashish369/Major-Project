@@ -28,7 +28,7 @@ function Table({ head, rows, empty }) {
   return (
     <table className="w-full text-sm">
       <thead>
-        <tr className="text-left text-slate-500">{head.map((h) => <th key={h} className="py-1 pr-3 font-medium">{h}</th>)}</tr>
+        <tr className="text-left text-slate-500">{head.map((h, i) => <th key={i} className="py-1 pr-3 font-medium">{h}</th>)}</tr>
       </thead>
       <tbody>
         {rows.map((r, i) => (

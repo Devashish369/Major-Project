@@ -21,6 +21,7 @@ from app.deps import get_current_user, get_membership, require_admin
 from app.models import Project, ProjectMember, Task, TaskDependency, User
 from app.schemas import ProjectCreate, ProjectOut, ProjectUpdate
 from app.services.health import compute_health
+from app.services.tasks import derive_project_status
 from app.main import ok
 
 router = APIRouter(prefix="/projects", tags=["projects"])
@@ -111,7 +112,7 @@ def _project_out(project: Project, db: Session) -> dict:
         id=project.id,
         title=project.title,
         description=project.description,
-        status=project.status,
+        status=derive_project_status(project.status, [t.status for t in all_tasks_raw]),
         priority=project.priority,
         start_date=project.start_date,
         due_date=project.due_date,

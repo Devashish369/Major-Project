@@ -102,3 +102,20 @@ def has_cycle(db: Session, task_id: int, depends_on_id: int) -> bool:
         stack.extend(_get_deps(db, current))
 
     return False
+
+
+def derive_project_status(stored: str, task_statuses: list[str]) -> str:
+    """
+    Project status follows its tasks, so nobody has to maintain it by hand:
+      all tasks done                      -> "completed"
+      at least one task started or done   -> "in_progress"
+      tasks exist but all are still todo  -> "pending"
+    A project with no tasks keeps its stored (manually chosen) status.
+    """
+    if not task_statuses:
+        return stored
+    if all(st == "done" for st in task_statuses):
+        return "completed"
+    if any(st in ("in_progress", "done") for st in task_statuses):
+        return "in_progress"
+    return "pending"
