@@ -47,7 +47,7 @@ Source documents: `G33_MajorProjectSynopsis.docx` (repo root, read, **not edited
 
 Use only these numbers (all from `README.md` / `docs/TESTING_REPORT.md`):
 
-- **Testing:** 258 automated tests pass on SQLite and PostgreSQL. The demo data reproduces all 16 designed project stories (16/16). Permission matrix: 47/47 checks. The app degrades gracefully in all four AI failure modes (cached-only, bad key, missing fallback, timeout).
+- **Testing:** 260 automated tests pass on SQLite and PostgreSQL. The demo data reproduces all 16 designed project stories (16/16). Permission matrix: 47/47 checks. The app degrades gracefully in all four AI failure modes (cached-only, bad key, missing fallback, timeout).
 - **Explainability, verified by hand:** the health score recomputes exactly from raw data. The assignment optimiser matches an independent integer-program optimum.
 - **Effort estimation:** TF-IDF + Ridge trained on 23,313 public Jira issues. Test MAE 3.14 story points vs 3.26 for the median baseline, a small but real improvement.
 - **NASA93 benchmark:** 93 public projects, cross-validated R² 0.27 ± 0.63. Weak; shown as a benchmark of the method.

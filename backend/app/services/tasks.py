@@ -119,3 +119,12 @@ def derive_project_status(stored: str, task_statuses: list[str]) -> str:
     if any(st in ("in_progress", "done") for st in task_statuses):
         return "in_progress"
     return "pending"
+
+
+def names_for(db: Session, user_ids) -> dict:
+    """{user_id: full_name} for ONLY the given ids (never loads other accounts' names)."""
+    ids = {i for i in user_ids if i is not None}
+    if not ids:
+        return {}
+    from app.models import User
+    return {u.id: u.full_name for u in db.execute(select(User).where(User.id.in_(ids))).scalars()}

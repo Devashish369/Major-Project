@@ -26,8 +26,9 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.config import settings
-from app.models import ActivityLog, Decision, Task, TaskDependency, User
+from app.models import ActivityLog, Decision, Task, TaskDependency
 from app.services.llm import call_llm
+from app.services.tasks import names_for
 
 logger = logging.getLogger(__name__)
 
@@ -55,7 +56,6 @@ class AskUnavailable(Exception):
 
 def build_context(db: Session, project_id: int) -> tuple[str, set[str]]:
     """Return (context_text, set of valid tags like {"T12", "D3"})."""
-    users = {u.id: u.full_name for u in db.execute(select(User)).scalars()}
     tasks = db.execute(select(Task).where(Task.project_id == project_id).order_by(Task.id)).scalars().all()
     deps: dict[int, list[int]] = {}
     for d in db.execute(
@@ -69,6 +69,8 @@ def build_context(db: Session, project_id: int) -> tuple[str, set[str]]:
         select(ActivityLog).where(ActivityLog.project_id == project_id)
         .order_by(ActivityLog.created_at.desc(), ActivityLog.id.desc()).limit(MAX_ACTIVITY_ROWS)
     ).scalars().all()
+    # only the people this project's tasks / decisions / activity refer to
+    users = names_for(db, [t.assignee_id for t in tasks] + [d.made_by for d in decisions] + [a.user_id for a in activity])
 
     sections: list[tuple[str, list[tuple[str, str]]]] = [
         ("DECISIONS", [(f"D{d.id}",

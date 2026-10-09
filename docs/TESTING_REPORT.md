@@ -26,14 +26,14 @@ cd ../frontend && npm run build && npm run lint
 
 ## 3. Automated tests – counts and results
 
-`pytest --collect-only`: **258 tests in 15 files.**
+`pytest --collect-only`: **260 tests in 15 files.**
 
 | File | Tests | Covers (module) |
 |---|---:|---|
 | test_risk.py | 40 | M8 risk model + NASA93 benchmark; monotonic sweeps, edge cases, per-project factors, estimator metrics on the benchmark endpoint |
 | test_forecast_health.py | 36 | M7 Monte Carlo forecast + health score; M9 burndown; date/delay consistency; health vs workload consistency |
 | test_assignments.py | 28 | M5 assignment optimiser (incl. hand-built 3×3 optimum) + workload |
-| test_projects.py | 27 | M2 projects, members, permissions; no admin escalation; delete cascades; project status derived from tasks |
+| test_projects.py | 29 | M2 projects, members, permissions; no admin escalation; delete cascades; project status derived from tasks |
 | test_ai.py | 22 | M4 planner with mocked LLM, fallback, apply-plan (validation, atomicity); no hidden SDK retries |
 | test_tasks.py | 20 | M3 tasks, dependencies (self / direct / indirect cycles), completed_at, activity, assignee membership |
 | test_auth.py | 18 | M1 register, login, me, JWT, bcrypt |
@@ -48,8 +48,8 @@ cd ../frontend && npm run build && npm run lint
 
 | Database | Result |
 |---|---|
-| SQLite (in memory) | **258 passed**, 0 failed, 0 skipped |
-| PostgreSQL 18.4 | **258 passed**, 0 failed, 0 skipped |
+| SQLite (in memory) | **260 passed**, 0 failed, 0 skipped |
+| PostgreSQL 18.4 | **260 passed**, 0 failed, 0 skipped |
 
 Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 258).
 

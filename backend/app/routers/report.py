@@ -13,10 +13,11 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user, get_membership
 from app.main import ok
-from app.models import ActivityLog, Decision, Project, Task, TaskDependency, User
+from app.models import ActivityLog, Decision, Project, Task, TaskDependency
 from app.routers.analytics import get_forecast, get_health
 from app.routers.assignments import workload as get_workload
 from app.services.report import build_report
+from app.services.tasks import names_for
 
 router = APIRouter(tags=["report"])
 
@@ -38,7 +39,6 @@ def project_report(
     deps = db.execute(
         select(TaskDependency).where(TaskDependency.task_id.in_([t.id for t in tasks] or [0]))
     ).scalars().all()
-    users = {u.id: u.full_name for u in db.execute(select(User)).scalars()}
     decisions = db.execute(
         select(Decision).where(Decision.project_id == project_id)
         .order_by(Decision.created_at.desc(), Decision.id.desc()).limit(10)
@@ -47,6 +47,8 @@ def project_report(
         select(ActivityLog).where(ActivityLog.project_id == project_id)
         .order_by(ActivityLog.created_at.desc(), ActivityLog.id.desc()).limit(10)
     ).scalars().all()
+    # only the people this project's tasks / decisions / activity refer to
+    users = names_for(db, [t.assignee_id for t in tasks] + [d.made_by for d in decisions] + [a.user_id for a in activity])
 
     report = build_report(
         project={

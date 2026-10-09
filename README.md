@@ -12,7 +12,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 
 | Area | What you can do | Where |
 |---|---|---|
-| Projects & team | Create projects, add members by e-mail, set roles, weekly capacity and 1–5 skill levels | Dashboard, Team tab, profile |
+| Projects & team | Create projects, add members by e-mail, set roles, weekly capacity and 1–5 skill levels. **Each person sees only the projects they created or were added to** (everything else answers 404). A new account starts with an empty dashboard until an admin adds it from the project's Team tab using the person's e-mail; it then appears on their dashboard within 30 seconds | Dashboard, Team tab, profile |
 | Kanban | Drag a card into **any** column (empty ones too) or use the drawer's one-click status buttons; the card, the project status and everyone else's board update live. Edit in a drawer (Esc closes it), add dependencies (cycles rejected), filter by sprint, a warning if you add a task whose title already exists, full activity log | Board tab |
 | AI planner | One sentence → draft plan (sprints, tasks, estimates, dependencies). Labelled "AI Generated" or "Cached Plan". Admin applies it. | Plan tab |
 | Estimate check | A model trained on 23,000 real Jira issues suggests hours next to the LLM's; large disagreements are flagged | Plan tab |
@@ -152,7 +152,7 @@ python -m seed.seed_demo --verify
 
 ```bash
 cd backend
-python -m pytest tests -q                                                        # SQLite, in memory: 258 tests
+python -m pytest tests -q                                                        # SQLite, in memory: 260 tests
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
 
@@ -253,6 +253,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 * **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
 * **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
 * **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, set the `DEMO_PASSWORD` environment variable when seeding a public deployment (see Deployment step D), and never put real data in that database.
+* **One account per browser at a time**: the login is stored once per browser, so two tabs share it. Signing in as someone else in one tab reloads the other tabs, and all cached data is cleared on every login, registration and sign-out. To use two accounts at the same time, use two different browsers or profiles (or a private window).
 * **Permissions are coarse**: any project member may edit project details and add *regular* members; only admins can add admins, remove members, change roles, delete the project or apply AI plans/assignments.
 * **Work due today counts as late**: if a project's due date is today and any work is left, the forecast reports a 100 % chance of being late (late means "finishes after the due date").
 * **Project status is derived, not typed**: with tasks, it is *Completed* when all are done, *In Progress* once any is started or done, otherwise *Pending*; a project with no tasks keeps the status set when it was created.

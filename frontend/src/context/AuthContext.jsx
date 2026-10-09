@@ -12,6 +12,7 @@
  */
 
 import { createContext, useContext, useEffect, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { loginUser, registerUser, getMe, updateMe } from '../api/auth';
 
 // ── Context ───────────────────────────────────────────────────────────────────
@@ -21,6 +22,7 @@ const TOKEN_KEY = 'intellipm_token';   // localStorage key
 
 // ── Provider ──────────────────────────────────────────────────────────────────
 export function AuthProvider({ children }) {
+  const qc = useQueryClient();
   const [user, setUser] = useState(null);
   // true while validating a stored token; nothing to validate when there is none
   const [loading, setLoading] = useState(() => !!localStorage.getItem(TOKEN_KEY));
@@ -43,8 +45,27 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false));
   }, []);
 
-  /** Store token and user in state + localStorage. */
+  /**
+   * Another tab of this browser logged in/out (the token is shared through localStorage).
+   * This tab would otherwise keep showing the old account while sending the new account's
+   * token, so reload it: it re-validates the token and starts with an empty cache.
+   */
+  useEffect(() => {
+    const onStorage = (e) => {
+      if (e.key === TOKEN_KEY || e.key === null) window.location.reload();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  /**
+   * Store token and user in state + localStorage.
+   * The query cache is emptied first: its keys (['projects'], ['tasks', 5] ...) do not contain
+   * the user, so without this the NEXT person to log in, in the same tab, would be shown the
+   * previous person's projects until the cache expired.
+   */
   function _saveSession(token, userData) {
+    qc.clear();
     localStorage.setItem(TOKEN_KEY, token);
     setUser(userData);
   }
@@ -66,6 +87,7 @@ export function AuthProvider({ children }) {
   /** Clear session and redirect handled by ProtectedRoute. */
   function logout() {
     localStorage.removeItem(TOKEN_KEY);
+    qc.clear();            // never leave one account's data in memory for the next login
     setUser(null);
   }
 
