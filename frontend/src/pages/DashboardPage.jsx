@@ -130,6 +130,8 @@ export default function DashboardPage() {
   const { data: projects = [], isLoading, error } = useQuery({
     queryKey: ['projects'],
     queryFn: listProjects,
+    refetchOnMount: 'always',      // opening the dashboard always shows the server's current list
+    refetchInterval: 30_000,       // so being added to a project shows up without a manual reload
   });
 
   const createMut = useMutation({
@@ -224,7 +226,11 @@ export default function DashboardPage() {
               <FolderOpen className="h-7 w-7 text-slate-500" />
             </div>
             <h3 className="text-lg font-semibold text-slate-300 mb-2">No projects yet</h3>
-            <p className="text-slate-500 text-sm mb-6">Create your first project to get started.</p>
+            <p className="text-slate-500 text-sm mb-2 max-w-md">
+              You only see projects you created or were added to. Create your first project, or ask a project admin to add you from
+              the project's <strong>Team</strong> tab using your email{user?.email ? <> (<span className="text-slate-300">{user.email}</span>)</> : null}.
+            </p>
+            <p className="text-slate-600 text-xs mb-6">This page checks for new projects every 30 seconds.</p>
             <button
               onClick={() => setShowCreate(true)}
               className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-500 transition"

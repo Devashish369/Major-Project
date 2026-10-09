@@ -351,3 +351,38 @@ class TestProjectStatusIsDerived:
         assert listed["status"] == "completed"                 # the dashboard card uses the same value
         client.patch(f"/api/v1/tasks/{b}", json={"status": "todo"}, headers=auth(tok))
         assert status() == "in_progress"                       # reopening a task reopens the project
+
+
+# ── Account isolation: a user sees ONLY the projects they belong to ───────────
+
+class TestOnlyMyProjects:
+    def test_added_to_one_project_sees_only_that_project(self, client):
+        owner = register(client, "iso_owner@x.com", "isoowner")
+        aditya = register(client, "iso_aditya@x.com", "isoaditya")
+        ids = [create_project(client, owner, title=t).json()["data"]["id"]
+               for t in ("Hospital", "Something Management", "E-commerce")]
+        mine = lambda: [p["title"] for p in client.get("/api/v1/projects", headers=auth(aditya)).json()["data"]]
+
+        assert mine() == []                                            # new account: nothing
+        client.post(f"/api/v1/projects/{ids[1]}/members", json={"email": "iso_aditya@x.com", "role": "member"}, headers=auth(owner))
+        assert mine() == ["Something Management"]                      # exactly the one project he was added to
+
+        for other in (ids[0], ids[2]):                                 # everything else is invisible, not just hidden in the list
+            for path in ("", "/tasks", "/members", "/report", "/analytics/health", "/decisions", "/sprints", "/activity"):
+                assert client.get(f"/api/v1/projects/{other}{path}", headers=auth(aditya)).status_code == 404, path
+
+        client.delete(f"/api/v1/projects/{ids[1]}/members/"
+                      f"{client.get('/api/v1/auth/me', headers=auth(aditya)).json()['data']['id']}", headers=auth(owner))
+        assert mine() == []                                            # removing him removes the project from his list
+
+    def test_name_lookup_only_returns_requested_people(self, client):
+        from tests.conftest import TestingSessionLocal
+        from app.services.tasks import names_for
+        a = register(client, "nm_a@x.com", "nma"); register(client, "nm_b@x.com", "nmb")
+        uid = client.get("/api/v1/auth/me", headers=auth(a)).json()["data"]["id"]
+        db = TestingSessionLocal()
+        try:
+            assert names_for(db, [uid, None]) == {uid: "User"}
+            assert names_for(db, []) == {} and names_for(db, [None]) == {}
+        finally:
+            db.close()

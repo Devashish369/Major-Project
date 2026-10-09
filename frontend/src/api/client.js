@@ -32,7 +32,17 @@ apiClient.interceptors.request.use(
 // Unwrap the response envelope so callers get `response.data.data` directly.
 apiClient.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(error),
+  (error) => {
+    // 401 on a normal request = the saved login expired or is invalid: sign out and go to /login.
+    // (Not for /auth/login and /auth/register themselves: a wrong password is also a 401.)
+    const url = error.config?.url || '';
+    const isAuthCall = url.includes('/auth/login') || url.includes('/auth/register');
+    if (error.response?.status === 401 && !isAuthCall && localStorage.getItem('intellipm_token')) {
+      localStorage.removeItem('intellipm_token');
+      if (!window.location.pathname.startsWith('/login')) window.location.assign('/login');
+    }
+    return Promise.reject(error);
+  },
 );
 
 export default apiClient;
