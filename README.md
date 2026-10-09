@@ -152,7 +152,7 @@ python -m seed.seed_demo --verify
 
 ```bash
 cd backend
-python -m pytest tests -q                                                        # SQLite, in memory: 260 tests
+python -m pytest tests -q                                                        # SQLite, in memory: 267 tests
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
 
@@ -240,6 +240,22 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 | Inter font | UI | Google Fonts, SIL Open Font Licence. |
 | Open-source libraries | Everything else | React, FastAPI, SQLAlchemy, scikit-learn, etc. under their MIT/BSD/Apache licences. |
 
+## Speed
+
+How fast a screen feels is decided mostly by the **number of database queries per request**, because on the deployed app each query is a network round trip from Render to Neon. Measured on the demo data with `python scripts/profile_api.py`:
+
+| Call | Queries before → after | Time before → after (local) |
+|---|---|---|
+| Dashboard (16 projects) | 99 → 6 | 73 → 16 ms |
+| Task list (30 tasks) | 34 → 4 | 19 → 9 ms |
+| Forecast (5,000 Monte Carlo runs) | 7 → 6 | 111 → 16 ms (all runs computed at once; results identical) |
+| First Analytics call after a restart | – | ≈ 1,500 → 130 ms (models are loaded at start-up) |
+| One pass over the main screens | 203 → 68 queries | |
+
+Other changes: the project check on every request costs one query instead of two; API responses over 1 KB are gzip-compressed; the main JavaScript file is 408 kB instead of 890 kB (122 kB instead of 262 kB compressed) because the charts, graph, report and plan tabs download only when opened; the page wakes the sleeping free server the moment it opens. `backend/tests/test_performance.py` fails if a list endpoint starts issuing more queries as data grows.
+
+What code cannot fix on the free plans: the API sleeps after 15 minutes idle (about a minute to wake), Neon's database suspends after 5 minutes idle (about a second to wake), and a Render server in a different region from the Neon database adds tens of milliseconds to every query (see DEPLOY_CHECKLIST.md, "Speed").
+
 ## Known limitations
 
 * **The risk classifier is experimental and secondary**: trained on simulated data, so its metrics are agreement with the simulation, not evidence of real-world performance; it ignores dependency chains, so on dependency-heavy projects it reads lower than the Monte Carlo forecast (bands agree on 12 of the 16 demo projects). The UI labels it experimental; the primary forecast is the Monte Carlo simulation.
@@ -253,7 +269,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 * **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
 * **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
 * **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, set the `DEMO_PASSWORD` environment variable when seeding a public deployment (see Deployment step D), and never put real data in that database.
-* **One account per browser at a time**: the login is stored once per browser, so two tabs share it. Signing in as someone else in one tab reloads the other tabs, and all cached data is cleared on every login, registration and sign-out. To use two accounts at the same time, use two different browsers or profiles (or a private window).
+* **Each browser tab has its own login**: sign in as a different person in each tab (for example a manager in one and a team member in another). A refresh keeps a tab signed in; closing the tab signs it out, and a new tab starts signed out. Cached data is cleared on every login, registration and sign-out so accounts never mix.
 * **Permissions are coarse**: any project member may edit project details and add *regular* members; only admins can add admins, remove members, change roles, delete the project or apply AI plans/assignments.
 * **Work due today counts as late**: if a project's due date is today and any work is left, the forecast reports a 100 % chance of being late (late means "finishes after the due date").
 * **Project status is derived, not typed**: with tasks, it is *Completed* when all are done, *In Progress* once any is started or done, otherwise *Pending*; a project with no tasks keeps the status set when it was created.

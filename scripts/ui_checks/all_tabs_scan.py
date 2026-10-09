@@ -18,7 +18,7 @@ with sync_playwright() as p:
     page.on("console", lambda m: m.type == "error" and problems.append((ctx["where"], "console", m.text[:160])))
     page.on("pageerror", lambda e: problems.append((ctx["where"], "pageerror", str(e)[:160])))
     page.on("response", lambda r: r.status >= 400 and "/ws/" not in r.url and problems.append((ctx["where"], f"HTTP {r.status}", r.url.split("8000")[-1][:90])))
-    page.goto(WEB + "/login"); page.evaluate(f"localStorage.setItem('intellipm_token', '{tok}')")
+    page.goto(WEB + "/login"); page.evaluate(f"sessionStorage.setItem('intellipm_token', '{tok}')")
     for title in ["Hospital Management System", "E-commerce Platform", "Library Management", "IoT Dashboard", "Event Booking System", "Fitness Tracker"]:
         pid = projects[title]
         for tab in TABS:

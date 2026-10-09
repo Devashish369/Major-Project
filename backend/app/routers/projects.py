@@ -29,44 +29,30 @@ router = APIRouter(prefix="/projects", tags=["projects"])
 
 # ── Helper: build ProjectOut with computed fields ─────────────────────────────
 
-def _project_out(project: Project, db: Session) -> dict:
+def _project_out(project: Project, db: Session, members=None, tasks=None, deps=None) -> dict:
     """
-    Compute task_count, member_count, done_ratio, health_score for a project.
+    Compute task_count, member_count, done_ratio, status and health_score for a project.
 
-    health_score is always None until M7 adds the health service.
-    task_count / done_ratio are always 0 until M3 adds tasks.
+    Callers that already hold the project's members / tasks / dependencies (the dashboard list
+    loads them for ALL projects in a few queries) pass them in; otherwise they are loaded here.
+    Everything below works on those in-memory lists, so a project costs 0 extra queries when
+    the lists are supplied (this used to be ~6 queries per project).
     """
-    member_count = db.execute(
-        select(func.count(ProjectMember.id)).where(
-            ProjectMember.project_id == project.id
-        )
-    ).scalar_one()
+    if tasks is None:
+        tasks = db.execute(select(Task).where(Task.project_id == project.id)).scalars().all()
+    if members is None:
+        members = db.execute(select(ProjectMember).where(ProjectMember.project_id == project.id)).scalars().all()
+    if deps is None:
+        task_ids = [t.id for t in tasks]
+        deps = db.execute(
+            select(TaskDependency).where(TaskDependency.task_id.in_(task_ids))
+        ).scalars().all() if task_ids else []
 
-    task_count = db.execute(
-        select(func.count(Task.id)).where(Task.project_id == project.id)
-    ).scalar_one()
-
-    done_count = db.execute(
-        select(func.count(Task.id)).where(
-            Task.project_id == project.id,
-            Task.status == "done",
-        )
-    ).scalar_one()
-
+    all_tasks_raw, members_raw, deps_raw = tasks, members, deps
+    member_count = len(members_raw)
+    task_count = len(all_tasks_raw)
+    done_count = sum(1 for t in all_tasks_raw if t.status == "done")
     done_ratio = (done_count / task_count) if task_count > 0 else 0.0
-
-    # M7: compute health score from tasks + dependencies + member utilization
-    all_tasks_raw = db.execute(
-        select(Task).where(Task.project_id == project.id)
-    ).scalars().all()
-    task_ids = [t.id for t in all_tasks_raw]
-    deps_raw = db.execute(
-        select(TaskDependency).where(TaskDependency.task_id.in_(task_ids))
-    ).scalars().all() if task_ids else []
-
-    members_raw = db.execute(
-        select(ProjectMember).where(ProjectMember.project_id == project.id)
-    ).scalars().all()
 
     from datetime import date as _date
     today = _date.today()
@@ -153,7 +139,28 @@ def list_projects(
         .order_by(Project.created_at.desc())
     ).scalars().all()
 
-    return ok(data=[_project_out(p, db) for p in projects])
+    # Load members, tasks and dependencies of ALL these projects at once (3 queries in total)
+    # instead of 3-6 queries per project - each query is a network round trip to the database.
+    ids = [p.id for p in projects]
+    members_by: dict[int, list] = {i: [] for i in ids}
+    tasks_by: dict[int, list] = {i: [] for i in ids}
+    deps_by: dict[int, list] = {i: [] for i in ids}
+    for m in db.execute(select(ProjectMember).where(ProjectMember.project_id.in_(ids))).scalars():
+        members_by[m.project_id].append(m)
+    project_of_task = {}
+    for t in db.execute(select(Task).where(Task.project_id.in_(ids))).scalars():
+        tasks_by[t.project_id].append(t)
+        project_of_task[t.id] = t.project_id
+    if project_of_task:
+        for d in db.execute(
+            select(TaskDependency).where(TaskDependency.task_id.in_(list(project_of_task)))
+        ).scalars():
+            deps_by[project_of_task[d.task_id]].append(d)
+
+    return ok(data=[
+        _project_out(p, db, members=members_by[p.id], tasks=tasks_by[p.id], deps=deps_by[p.id])
+        for p in projects
+    ])
 
 
 # ── POST /projects ────────────────────────────────────────────────────────────

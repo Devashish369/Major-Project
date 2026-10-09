@@ -6,6 +6,7 @@
  * the base URL and any future interceptors (e.g., JWT headers) are centralised.
  */
 import axios from 'axios';
+import { getToken, clearToken } from './session';
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1',
@@ -15,11 +16,10 @@ const apiClient = axios.create({
 });
 
 // ── Request interceptor ────────────────────────────────────────────────────
-// Attach the JWT from localStorage on every request.
-// The token is stored by AuthContext after login/register.
+// Attach this tab's JWT on every request (see api/session.js: each tab has its own login).
 apiClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('intellipm_token');
+    const token = getToken();
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
@@ -37,8 +37,8 @@ apiClient.interceptors.response.use(
     // (Not for /auth/login and /auth/register themselves: a wrong password is also a 401.)
     const url = error.config?.url || '';
     const isAuthCall = url.includes('/auth/login') || url.includes('/auth/register');
-    if (error.response?.status === 401 && !isAuthCall && localStorage.getItem('intellipm_token')) {
-      localStorage.removeItem('intellipm_token');
+    if (error.response?.status === 401 && !isAuthCall && getToken()) {
+      clearToken();
       if (!window.location.pathname.startsWith('/login')) window.location.assign('/login');
     }
     return Promise.reject(error);

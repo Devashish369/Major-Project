@@ -47,10 +47,13 @@ def _check_assignee(db: Session, project_id: int, assignee_id) -> None:
 
 # ── Helper: build TaskOut dict with dependency list ───────────────────────────
 
-def _task_out(task: Task, db: Session) -> dict:
-    dep_ids = list(db.execute(
-        select(TaskDependency.depends_on_id).where(TaskDependency.task_id == task.id)
-    ).scalars().all())
+def _task_out(task: Task, db: Session, dep_ids=None) -> dict:
+    # `dep_ids` is passed by the list endpoint, which loads every dependency in ONE query;
+    # single-task callers leave it None and it is looked up here.
+    if dep_ids is None:
+        dep_ids = list(db.execute(
+            select(TaskDependency.depends_on_id).where(TaskDependency.task_id == task.id)
+        ).scalars().all())
 
     return TaskOut(
         id=task.id,
@@ -98,7 +101,14 @@ def list_tasks(
         select(Task).where(Task.project_id == project_id)
         .order_by(Task.created_at)
     ).scalars().all()
-    return ok(data=[_task_out(t, db) for t in tasks])
+    deps_by_task: dict[int, list[int]] = {t.id: [] for t in tasks}
+    if tasks:
+        for task_id, dep_id in db.execute(
+            select(TaskDependency.task_id, TaskDependency.depends_on_id)
+            .where(TaskDependency.task_id.in_(list(deps_by_task)))
+        ).all():
+            deps_by_task[task_id].append(dep_id)
+    return ok(data=[_task_out(t, db, deps_by_task[t.id]) for t in tasks])
 
 
 # ── POST /projects/{project_id}/tasks ────────────────────────────────────────

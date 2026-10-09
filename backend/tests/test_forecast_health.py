@@ -22,6 +22,7 @@ Integration tests (HTTP, uses TestClient + in-memory DB):
 """
 
 import math
+import numpy as np
 from datetime import date, timedelta
 
 import pytest
@@ -524,3 +525,45 @@ class TestHealthWorkloadConsistency:
         assert health["diagnostics"]["max_utilization"] == pytest.approx(max(w["utilization"] for w in workload), abs=1e-3)
         assert health["penalties"]["overload"] == 0          # 10 h of work vs 30 h/week is not overload
         assert listed["health_score"] == health["health_score"]
+
+
+# ── Performance rewrite: the vectorised simulator equals the original loop exactly ──
+
+class TestVectorisedSimulatorMatchesReference:
+    @staticmethod
+    def _reference(rng, est_array, task_ids, dep_graph, mu, sigma, n_sims, eff, one):
+        """The ORIGINAL implementation: one simulation at a time with a memoised DFS."""
+        from app.services.forecast import _critical_path_hours
+        ids = set(task_ids)
+        out = []
+        for _ in range(n_sims):
+            actual = est_array * np.exp(rng.normal(mu, sigma, size=len(task_ids)))
+            sampled = {tid: float(actual[i]) for i, tid in enumerate(task_ids)}
+            out.append(max(float(actual.sum()) / eff, _critical_path_hours(ids, sampled, dep_graph) / one))
+        return np.array(out)
+
+    def test_identical_on_random_projects(self):
+        import numpy as np
+        from app.services.forecast import _simulate_durations
+        gen = np.random.default_rng(123)
+        for case in range(300):
+            n = int(gen.integers(1, 26))
+            ids = list(range(100, 100 + n))
+            est = gen.uniform(1, 40, size=n)
+            graph = {}                                    # only edges to EARLIER ids: acyclic
+            for k in range(1, n):
+                preds = [ids[j] for j in range(k) if gen.random() < 0.25]
+                if preds:
+                    graph[ids[k]] = preds
+            mu, sigma = float(gen.uniform(-0.1, 0.4)), float(gen.uniform(0.05, 0.6))
+            eff, one = float(gen.uniform(1, 30)), float(gen.uniform(1, 8))
+            new = _simulate_durations(np.random.default_rng(case), est, ids, graph, mu, sigma, 400, eff, one)
+            ref = self._reference(np.random.default_rng(case), est, ids, graph, mu, sigma, 400, eff, one)
+            assert np.array_equal(new, ref), f"case {case}: max diff {np.abs(new - ref).max()}"
+
+    def test_a_dependency_cycle_cannot_hang_or_crash(self):
+        import numpy as np
+        from app.services.forecast import _simulate_durations
+        out = _simulate_durations(np.random.default_rng(0), np.array([5.0, 5.0, 5.0]), [1, 2, 3],
+                                  {1: [2], 2: [1], 3: [2]}, 0.1, 0.3, 50, 4.0, 4.0)
+        assert out.shape == (50,) and np.isfinite(out).all()

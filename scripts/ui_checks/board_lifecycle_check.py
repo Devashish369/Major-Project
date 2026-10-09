@@ -22,7 +22,7 @@ def col_titles(page, label):
 with sync_playwright() as p:
     b = p.chromium.launch(channel="msedge", headless=True)
     page = b.new_page(viewport={"width": 1600, "height": 900})
-    page.goto(WEB + "/login"); page.evaluate(f"localStorage.setItem('intellipm_token', '{tok}')")
+    page.goto(WEB + "/login"); page.evaluate(f"sessionStorage.setItem('intellipm_token', '{tok}')")
     page.goto(f"{WEB}/projects/{pid}"); page.wait_for_load_state("networkidle"); time.sleep(1.2)
 
     # 1. Empty board shows hints in all three columns
