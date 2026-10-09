@@ -11,8 +11,9 @@ import {
   Loader2, AlertCircle, BookOpen, Plus, Trash2, Sparkles, Send, ListChecks, ScrollText, Activity, RefreshCw,
 } from 'lucide-react';
 import { listDecisions, createDecision, deleteDecision, askProject } from '../api/decisions';
+import { errorMessage } from '../api/errors';
 
-const errText = (e, fallback) => e?.response?.data?.detail || e?.response?.data?.message || fallback;
+const errText = (e, fallback) => errorMessage(e, fallback);
 const fmt = (iso) => new Date(iso).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 
 // ── Ask box ───────────────────────────────────────────────────────────────────

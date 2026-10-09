@@ -49,3 +49,16 @@ def test_500_does_not_leak_internals(client):
         app.router.routes.pop()
     assert r.status_code == 500 and _is_envelope(r.json())
     assert "secret" not in r.text
+
+
+def test_bad_username_is_a_readable_422_and_no_account_is_created(client):
+    """The exact input from a user report: username 'aditya@'."""
+    r = client.post(f"{API}/auth/register", json={
+        "email": "aditya@123.com", "username": "aditya@", "full_name": "Aditya Pande", "password": "password123"})
+    body = r.json()
+    assert r.status_code == 422 and _is_envelope(body)
+    assert "letters, digits, and underscores" in body["message"] and "Value error" not in body["message"]
+    assert isinstance(body["detail"], list)                     # list shape is kept for old clients ...
+    # ... so the frontend must never render `detail` directly (see frontend/src/api/errors.js)
+    login = client.post(f"{API}/auth/login", json={"email": "aditya@123.com", "password": "password123"})
+    assert login.status_code == 401                             # nothing was stored

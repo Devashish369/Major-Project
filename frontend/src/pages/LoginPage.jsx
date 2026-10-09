@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Loader2, Eye, EyeOff, BarChart2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { errorMessage } from '../api/errors';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -32,11 +33,7 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     } catch (err) {
       // Extract the API error message from the response envelope
-      const msg =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Login failed. Please try again.';
-      setError(msg);
+      setError(errorMessage(err, 'Login failed. Please try again.'));
     } finally {
       setLoading(false);
     }

@@ -26,7 +26,7 @@ cd ../frontend && npm run build && npm run lint
 
 ## 3. Automated tests – counts and results
 
-`pytest --collect-only`: **257 tests in 15 files.**
+`pytest --collect-only`: **258 tests in 15 files.**
 
 | File | Tests | Covers (module) |
 |---|---:|---|
@@ -42,16 +42,16 @@ cd ../frontend && npm run build && npm run lint
 | test_estimator.py | 12 | M6 estimator model + endpoint |
 | test_report.py | 7 | M16 report: structure, outsider 404, empty / completed / no-due-date projects, insights on seeded E-commerce and IoT |
 | test_seed_data.py | 5 | M10 demo-data definitions; DEMO_PASSWORD env var; live-LLM script cannot be collected |
-| test_error_envelope.py | 4 | §7 error envelope for 401 / 404 / 422 / 500 (no internals leaked) |
+| test_error_envelope.py | 5 | §7 error envelope for 401 / 404 / 422 / 500 (no internals leaked) |
 | test_config_urls.py | 4 | Neon-style DATABASE_URL normalisation (sslmode, channel_binding, both prefixes) |
 | test_sprints.py | 3 | Sprint list with counts, permissions, no write endpoint |
 
 | Database | Result |
 |---|---|
-| SQLite (in memory) | **257 passed**, 0 failed, 0 skipped |
-| PostgreSQL 18.4 | **257 passed**, 0 failed, 0 skipped |
+| SQLite (in memory) | **258 passed**, 0 failed, 0 skipped |
+| PostgreSQL 18.4 | **258 passed**, 0 failed, 0 skipped |
 
-Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 257).
+Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 258).
 
 Frontend: `npm run build` succeeds; `npm run lint` **0 warnings, 0 errors** (was 16 warnings before the clean-up). The frontend has no unit-test runner; its behaviour was checked by the browser walk-through (section 8) and the manual UAT table.
 

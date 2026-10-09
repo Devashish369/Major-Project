@@ -7,6 +7,7 @@ import { X, Plus, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { createTask, listTasks } from '../api/tasks';
 import { listMembers } from '../api/projects';
+import { errorMessage } from '../api/errors';
 
 export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onClose }) {
   const qc = useQueryClient();
@@ -35,7 +36,7 @@ export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onC
       qc.invalidateQueries({ queryKey: ['project', projectId] });
       onClose();
     },
-    onError: (e) => setError(e.response?.data?.detail || 'Failed to create task.'),
+    onError: (e) => setError(errorMessage(e, 'Failed to create task.')),
   });
 
   function handleChange(e) {

@@ -8,6 +8,7 @@ import { useState } from 'react';
 import { X, Plus, Trash2, Loader2, Star } from 'lucide-react';
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { errorMessage } from '../api/errors';
 
 export default function SkillsEditor({ onClose }) {
   const { user, updateProfile } = useAuth();
@@ -19,7 +20,7 @@ export default function SkillsEditor({ onClose }) {
   const mut = useMutation({
     mutationFn: (skills) => updateProfile({ skills }),
     onSuccess: () => onClose(),
-    onError: (e) => setError(e.response?.data?.detail || 'Failed to save skills.'),
+    onError: (e) => setError(errorMessage(e, 'Failed to save skills.')),
   });
 
   function addSkill() {
