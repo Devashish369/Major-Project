@@ -67,6 +67,48 @@ def _critical_path_hours(
     return max((dfs(t) for t in open_task_ids), default=0.0)
 
 
+def _simulate_durations(rng, est_array, task_ids, dep_graph, mu, sigma, n_sims, effective_per_day, one_person_per_day):
+    """
+    Project duration in days for every simulation, computed for ALL simulations at once.
+
+    Same model as spec §8.4 (and the same random numbers, in the same order, as the earlier
+    one-simulation-at-a-time loop, so results are unchanged), but numpy works on a
+    (n_sims x n_tasks) table instead of 5,000 Python iterations:
+      actual hours  = estimate x exp(Normal(mu, sigma))                    (every task, every run)
+      parallel days = sum of a run's hours / team hours per day
+      chain hours   = for each task in dependency order:  own hours + the largest chain among its
+                      open prerequisites;  the longest chain = max over tasks
+      duration      = max(parallel days, chain hours / one person's hours per day)
+    A dependency cycle (rejected by the API, but never trust data) cannot hang this: tasks that
+    are part of a cycle simply do not add their prerequisites' chains.
+    """
+    n_tasks = len(task_ids)
+    actual = est_array * np.exp(rng.normal(mu, sigma, size=(n_sims, n_tasks)))
+    parallel_days = actual.sum(axis=1) / effective_per_day
+
+    index = {tid: i for i, tid in enumerate(task_ids)}
+    preds = {i: [index[p] for p in dep_graph.get(tid, []) if p in index] for tid, i in index.items()}
+    # Kahn topological order: a task is processed after all of its prerequisites
+    remaining = {i: len(set(ps)) for i, ps in preds.items()}
+    children: dict[int, list[int]] = {i: [] for i in preds}
+    for i, ps in preds.items():
+        for p in set(ps):
+            children[p].append(i)
+    order = [i for i, n in remaining.items() if n == 0]
+    for i in order:                       # `order` grows while we walk it
+        for c in children[i]:
+            remaining[c] -= 1
+            if remaining[c] == 0:
+                order.append(c)
+
+    chain = np.zeros_like(actual)
+    for i in order:
+        ps = sorted(set(preds[i]))
+        chain[:, i] = actual[:, i] + (chain[:, ps].max(axis=1) if ps else 0.0)
+    cp_days = chain.max(axis=1) / one_person_per_day if n_tasks else np.zeros(n_sims)
+    return np.maximum(parallel_days, cp_days)
+
+
 def run_forecast(
     *,
     open_tasks: list[dict],       # [{"id": int, "estimate_hours": float}]
@@ -163,29 +205,9 @@ def run_forecast(
     n_tasks = len(task_id_list)
     est_array = np.array([estimates[tid] for tid in task_id_list])
 
-    durations = []  # days per simulation
-
-    for _ in range(n_sims):
-        # Sample actual hours via log-normal overrun
-        noise  = rng.normal(mu, sigma, size=n_tasks)
-        actual = est_array * np.exp(noise)  # elementwise
-
-        sampled: dict[int, float] = {
-            tid: float(actual[i]) for i, tid in enumerate(task_id_list)
-        }
-
-        # Parallel track: total work ÷ team capacity
-        total_sampled = float(actual.sum())
-        parallel_days = total_sampled / effective_per_day
-
-        # Critical path: longest chain through the dependency graph
-        cp_hours = _critical_path_hours(open_ids_all, sampled, dep_graph)
-        cp_days  = cp_hours / one_person_per_day
-
-        duration_days = max(parallel_days, cp_days)
-        durations.append(duration_days)
-
-    durations_arr = np.array(durations)
+    durations_arr = _simulate_durations(
+        rng, est_array, task_id_list, dep_graph, mu, sigma, n_sims, effective_per_day, one_person_per_day
+    )
 
     # ── 7. Percentiles → dates ────────────────────────────────────────────────
     p50_days = float(np.percentile(durations_arr, 50))

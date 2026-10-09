@@ -26,12 +26,12 @@ cd ../frontend && npm run build && npm run lint
 
 ## 3. Automated tests – counts and results
 
-`pytest --collect-only`: **260 tests in 15 files.**
+`pytest --collect-only`: **267 tests in 16 files.**
 
 | File | Tests | Covers (module) |
 |---|---:|---|
 | test_risk.py | 40 | M8 risk model + NASA93 benchmark; monotonic sweeps, edge cases, per-project factors, estimator metrics on the benchmark endpoint |
-| test_forecast_health.py | 36 | M7 Monte Carlo forecast + health score; M9 burndown; date/delay consistency; health vs workload consistency |
+| test_forecast_health.py | 38 | M7 Monte Carlo forecast + health score; M9 burndown; date/delay consistency; health vs workload consistency |
 | test_assignments.py | 28 | M5 assignment optimiser (incl. hand-built 3×3 optimum) + workload |
 | test_projects.py | 29 | M2 projects, members, permissions; no admin escalation; delete cascades; project status derived from tasks |
 | test_ai.py | 22 | M4 planner with mocked LLM, fallback, apply-plan (validation, atomicity); no hidden SDK retries |
@@ -44,14 +44,15 @@ cd ../frontend && npm run build && npm run lint
 | test_seed_data.py | 5 | M10 demo-data definitions; DEMO_PASSWORD env var; live-LLM script cannot be collected |
 | test_error_envelope.py | 5 | §7 error envelope for 401 / 404 / 422 / 500 (no internals leaked) |
 | test_config_urls.py | 4 | Neon-style DATABASE_URL normalisation (sslmode, channel_binding, both prefixes) |
-| test_sprints.py | 3 | Sprint list with counts, permissions, no write endpoint |
+| test_sprints.py | 3 |
+| test_performance.py | 5 | query-count guards (no N+1 on the dashboard and task list), gzip, one membership query per request | Sprint list with counts, permissions, no write endpoint |
 
 | Database | Result |
 |---|---|
-| SQLite (in memory) | **260 passed**, 0 failed, 0 skipped |
-| PostgreSQL 18.4 | **260 passed**, 0 failed, 0 skipped |
+| SQLite (in memory) | **267 passed**, 0 failed, 0 skipped |
+| PostgreSQL 18.4 | **267 passed**, 0 failed, 0 skipped |
 
-Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 260; also register, account-switch and owner-adds-member journeys: 8/8, 9/9, 6/6).
+Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 267; also register, account-switch and owner-adds-member journeys: 8/8, 9/9, 6/6).
 
 Frontend: `npm run build` succeeds; `npm run lint` **0 warnings, 0 errors** (was 16 warnings before the clean-up). The frontend has no unit-test runner; its behaviour was checked by the browser walk-through (section 8) and the manual UAT table.
 

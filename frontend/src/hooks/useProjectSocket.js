@@ -11,8 +11,8 @@
  */
 import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { getToken } from '../api/session';
 
-const TOKEN_KEY = 'intellipm_token';
 const PING_MS = 25_000;          // keep-alive: proxies close idle sockets after ~1 minute
 const MAX_BACKOFF_MS = 30_000;
 const MAX_FAILED_ATTEMPTS = 6;   // consecutive attempts that never opened -> stop and show "offline"
@@ -22,7 +22,7 @@ function socketUrl(projectId) {
   const base = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api/v1';
   const u = new URL(base);
   const proto = u.protocol === 'https:' ? 'wss:' : 'ws:';
-  const token = encodeURIComponent(localStorage.getItem(TOKEN_KEY) || '');
+  const token = encodeURIComponent(getToken() || '');
   return `${proto}//${u.host}/ws/projects/${projectId}?token=${token}`;
 }
 

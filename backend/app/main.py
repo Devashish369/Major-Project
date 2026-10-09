@@ -17,12 +17,14 @@ Response envelope (section 7):
 from contextlib import asynccontextmanager
 
 import logging
+import threading
 
 from fastapi import FastAPI, Request
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
@@ -32,12 +34,26 @@ from app.database import engine, Base
 logger = logging.getLogger(__name__)
 
 
+def _warm_models() -> None:
+    """Best effort: a failure here only means the first request loads the model itself."""
+    try:
+        from app.services import estimator, risk
+        risk._load()
+        estimator._load_model()
+        logger.info("ML models warmed up")
+    except Exception:
+        logger.exception("Model warm-up failed (models will load on first use)")
+
+
 # ── Lifespan (startup / shutdown) ─────────────────────────────────────────────
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Create all DB tables on startup. Clean shutdown on exit."""
     import app.models  # noqa: F401 – registers all ORM models with Base.metadata
     Base.metadata.create_all(bind=engine)
+    # Load the ML models in the background NOW, so the first person to open Analytics does not
+    # wait for scikit-learn to import and the models to unpickle (several seconds on a free server).
+    threading.Thread(target=_warm_models, daemon=True, name="warm-models").start()
     yield   # application runs here
     # (no teardown needed for SQLite; add connection-pool cleanup here for Postgres)
 
@@ -48,6 +64,9 @@ app = FastAPI(
     description="AI-assisted project management – IntelliPM backend",
     lifespan=lifespan,   # modern replacement for @app.on_event("startup")
 )
+
+# Compress JSON responses over 1 KB (a 30-task list shrinks ~5x): less data over the internet
+app.add_middleware(GZipMiddleware, minimum_size=1000)
 
 # ── CORS ──────────────────────────────────────────────────────────────────────
 app.add_middleware(

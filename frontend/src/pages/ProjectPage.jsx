@@ -6,7 +6,7 @@
  * M4 added: Plan tab (AI planner + apply-plan).
  * M5 added: Workload bars + Recommend Assignments panel in Team tab.
  */
-import { useState } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -20,11 +20,13 @@ import { listTasks } from '../api/tasks';
 import { recommendAssignments, applyAssignments, getWorkload } from '../api/assignments';
 import AddMemberModal from '../components/AddMemberModal';
 import KanbanBoard from '../components/KanbanBoard';
-import PlanTab from '../components/PlanTab';
-import AnalyticsTab from '../components/AnalyticsTab';
-import GraphTab from '../components/GraphTab';
-import DecisionsTab from '../components/DecisionsTab';
-import ReportTab from '../components/ReportTab';
+// Heavy tabs are downloaded only when opened (charts, graph library, report) so the first
+// screen loads much faster.  The Board stays in the main bundle: it is the default tab.
+const PlanTab = lazy(() => import('../components/PlanTab'));
+const AnalyticsTab = lazy(() => import('../components/AnalyticsTab'));
+const GraphTab = lazy(() => import('../components/GraphTab'));
+const DecisionsTab = lazy(() => import('../components/DecisionsTab'));
+const ReportTab = lazy(() => import('../components/ReportTab'));
 import useProjectSocket from '../hooks/useProjectSocket';
 import { errorMessage } from '../api/errors';
 
@@ -551,6 +553,7 @@ export default function ProjectPage() {
         {tab === 'Board' && (
           <KanbanBoard tasks={tasks} projectId={projectId} />
         )}
+        <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-indigo-400" /></div>}>
         {tab === 'Plan' && (
           <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}
@@ -560,6 +563,7 @@ export default function ProjectPage() {
           <DecisionsTab projectId={projectId} tasks={tasks} isAdmin={isAdmin} currentUserId={user?.id} />
         )}
         {tab === 'Analytics' && <AnalyticsTab projectId={projectId} dueDate={project?.due_date} />}
+        </Suspense>
         {tab === 'Team' && (
           <TeamTab projectId={projectId} isAdmin={isAdmin} currentUserId={user?.id} />
         )}

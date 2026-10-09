@@ -38,7 +38,7 @@ def drag(page, title, col_label, dx=0, dy=60):
 with sync_playwright() as p:
     b = p.chromium.launch(channel="msedge", headless=True)
     page = b.new_page(viewport={"width": 1600, "height": 900})
-    page.goto(WEB + "/login"); page.evaluate(f"localStorage.setItem('intellipm_token', '{tok}')")
+    page.goto(WEB + "/login"); page.evaluate(f"sessionStorage.setItem('intellipm_token', '{tok}')")
     page.goto(f"{WEB}/projects/{pid}"); page.wait_for_load_state("networkidle"); time.sleep(1.5)
 
     # 1. EMPTY column targets (the reported bug)

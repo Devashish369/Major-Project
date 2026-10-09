@@ -66,13 +66,9 @@ def get_membership(
     Raises HTTP 404 for both "project doesn't exist" and "user is not a member"
     so callers cannot enumerate project IDs they don't belong to.
     """
-    # Check project exists first (separate query so the 404 is unambiguous in logs)
-    project = db.execute(
-        select(Project).where(Project.id == project_id)
-    ).scalar_one_or_none()
-    if project is None:
-        raise HTTPException(status_code=404, detail="Project not found.")
-
+    # ONE query is enough: "project does not exist" and "you are not a member" must look the
+    # same to the caller anyway (identical 404), and a membership row implies the project exists.
+    # (A separate existence check used to cost an extra database round trip on every request.)
     membership = db.execute(
         select(ProjectMember).where(
             ProjectMember.project_id == project_id,

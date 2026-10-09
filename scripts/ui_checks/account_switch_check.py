@@ -62,18 +62,24 @@ with sync_playwright() as p:
     check("switching back shows the demo user's full list again", cards(page) >= 17)
     httpx.delete(f"{API}/projects/{pid}", headers=H)
 
-    # E: TWO TABS of one browser (shared login storage): signing in as someone else in tab 2 must not leave tab 1
-    # showing the first account's data with the second account's token.
+    # E: TWO TABS of ONE browser, each signed in as a DIFFERENT person at the same time (login is per tab)
     ctx = b.new_context(viewport={"width": 1400, "height": 900})
     t1 = ctx.new_page(); t2 = ctx.new_page()
     login_ui(t1, "demo@intellipm.demo", "Demo@1234")
     t1_before = cards(t1)
     t2.goto(WEB + "/login"); t2.wait_for_load_state("networkidle")
+    check("a second tab does NOT start logged in as tab 1's account", "/login" in t2.url)
     register_ui(t2, "Second Person", f"second{sfx}@isolation.org", f"second_{sfx}", "password123", spa=False)
-    time.sleep(2.5)                                    # tab 1 receives the storage event and reloads itself
-    t1.wait_for_load_state("networkidle"); time.sleep(1)
-    check("tab 1 follows the account switch (header name)", "Second Person" in t1.locator("header").inner_text())
-    check("tab 1 no longer shows the demo user's projects", t1_before >= 16 and cards(t1) == 0)
+    time.sleep(2.5)                                    # give any (removed) cross-tab sync time to misbehave
+    check("tab 1 is STILL the demo user", "Demo Presenter" in t1.locator("header").inner_text())
+    check("tab 2 is the second person", "Second Person" in t2.locator("header").inner_text())
+    check("tab 1 still shows its projects, tab 2 shows none", t1_before >= 16 and cards(t1) >= 16 and cards(t2) == 0)
+    t1.reload(); t1.wait_for_load_state("networkidle"); time.sleep(1.2)
+    t2.reload(); t2.wait_for_load_state("networkidle"); time.sleep(1.2)
+    check("each tab keeps its own login after a refresh", "Demo Presenter" in t1.locator("header").inner_text() and "Second Person" in t2.locator("header").inner_text())
+    # signing out in one tab must not sign out the other
+    signout(t2); t1.reload(); t1.wait_for_load_state("networkidle"); time.sleep(1)
+    check("signing out in tab 2 leaves tab 1 signed in", "/dashboard" in t1.url and cards(t1) >= 16)
     b.close()
 
 print(f"\n{sum(results)}/{len(results)} checks passed")

@@ -21,7 +21,9 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import DashboardPage from './pages/DashboardPage';
 import ProjectPage from './pages/ProjectPage';
-import BenchmarksPage from './pages/BenchmarksPage';
+import { Suspense, lazy, useEffect } from 'react';
+import apiClient from './api/client';
+const BenchmarksPage = lazy(() => import('./pages/BenchmarksPage'));
 import ErrorBoundary from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
@@ -31,6 +33,10 @@ const queryClient = new QueryClient({
 });
 
 export default function App() {
+  // Free hosting puts the API to sleep when idle (about a minute to wake). Poking it the moment
+  // the page opens means it is already waking up while the person types their password.
+  useEffect(() => { apiClient.get('/health').catch(() => {}); }, []);
+
   return (
     <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
@@ -68,7 +74,7 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <div className="min-h-screen bg-slate-900 p-6">
-                    <BenchmarksPage />
+                    <Suspense fallback={null}><BenchmarksPage /></Suspense>
                   </div>
                 </ProtectedRoute>
               }

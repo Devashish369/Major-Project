@@ -78,6 +78,14 @@ Preflight already done in the repo (2026-10-08):
     Open http://localhost:5173 and log in as the demo user. Everything works except Ask (it says AI answers are switched off) and the plan is the cached hospital example.
 21. [ ] Say so plainly: "the hosted copy is down, this is the same code running locally".
 
+## Speed – three things only you can do on the dashboards
+
+The code is already optimised (see README "Speed"). These settings decide the rest:
+
+- [ ] **Put Render and Neon in the same region.** In Neon: project → Settings shows the region (yours is *AWS US East 2 (Ohio)*). In Render: open `intellipm-api` → Settings → **Region**. If it is not **Ohio**, every database query crosses regions (about 50-80 ms each, 4-6 queries per request). A Render service's region cannot be changed in place: delete the service and create it again in **Ohio** (Blueprint: add `region: ohio` under the service in `render.yaml` before creating, or choose Ohio in the manual form). If the web service is in Ohio already, nothing to do.
+- [ ] **Stop the free API from sleeping before the demo.** Use a free uptime monitor (for example UptimeRobot or cron-job.org) to request `https://<your API>/api/v1/health` every 10 minutes. One free web service running all month fits inside Render's 750 free hours. Do **not** point it at a page that touches the database: that would keep Neon awake all month and use up its free compute hours.
+- [ ] **Neon wakes in about a second** after 5 idle minutes; the very first request after a quiet spell is therefore a little slower. Open the site once before presenting.
+
 ## H. After the demo
 
 22. [ ] Rotate the Groq and Gemini keys if they were ever shown on screen or shared; update them in Render → Environment.
