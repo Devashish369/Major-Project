@@ -1,7 +1,7 @@
 # Where the product differs from PROJECT_SPEC.md
 
 Use this list when you update the deck and report so they describe what was actually built.
-Checked against the code and tests on 2026-10-06 and re-checked in the final review and closing session on 2026-10-08 (255 tests pass on SQLite and PostgreSQL).
+Checked against the code and tests on 2026-10-06 and re-checked in the final review and closing session on 2026-10-08 (257 tests pass on SQLite and PostgreSQL).
 
 ## 1. In the spec but NOT built
 
@@ -48,7 +48,7 @@ Checked against the code and tests on 2026-10-06 and re-checked in the final rev
 | Risk classifier (HistGradientBoosting, monotonic constraints), 6,000 **simulated** snapshots | accuracy 92.8 %, precision 92.2 %, recall 84.8 %, ROC-AUC 0.93 (held-out 1,200) | Agreement with the simulation that produced the labels, **not** real-world accuracy. Call it **experimental and secondary**; ML vs Monte Carlo bands agree on 12/16 demo projects. |
 | NASA93 effort benchmark (gradient boosting), 93 real projects, 5-fold CV | MAE ≈ 308 person-months, R² **0.27 ± 0.63** | Weak and unstable, as expected with 93 heterogeneous projects. Present it as a benchmark of the method. |
 | Forecast | 5,000 Monte Carlo runs, seeded; overrun default log-normal(μ=0.10, σ=0.35), learned from the project if ≥ 10 finished tasks have actual hours | |
-| Tests | 255 pytest tests pass (SQLite in memory and PostgreSQL) | see docs/TESTING_REPORT.md |
+| Tests | 257 pytest tests pass (SQLite in memory and PostgreSQL) | see docs/TESTING_REPORT.md |
 | Demo data | 12 users, 16 projects, 252 tasks, ~55 dependencies, ~900 activity rows, 28 decisions; 16/16 stories verified | |
 
 ## 5. Changed by the final review (2026-10-08)
@@ -57,6 +57,7 @@ These are behaviour changes made while fixing defects; quote the new behaviour.
 
 | Area | Now |
 |---|---|
+| Project status (after deployment feedback) | Derived from the tasks (all done → completed; any started/done → in progress; all todo → pending); no tasks → the stored value. The Board also accepts drops on empty columns, has one-click status buttons in the task drawer, shows assignee initials instead of ids, and warns about duplicate titles. |
 | Sprints (closing session) | Sprints are created by applying an AI plan and can be listed and filtered; manual sprint editing is future scope. |
 | Adding members | Any member may still add a regular member, but only an admin can add someone **as admin** (previously a member could add an admin account and then delete the project). |
 | SQLite | Foreign keys are enforced, so deleting a project removes its members, tasks, decisions and activity (as PostgreSQL always did). |

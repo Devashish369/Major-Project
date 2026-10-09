@@ -13,7 +13,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Area | What you can do | Where |
 |---|---|---|
 | Projects & team | Create projects, add members by e-mail, set roles, weekly capacity and 1–5 skill levels | Dashboard, Team tab, profile |
-| Kanban | Drag tasks between To do / In progress / Done, edit in a drawer, add dependencies (cycles rejected), filter by sprint, full activity log | Board tab |
+| Kanban | Drag a card into **any** column (empty ones too) or use the drawer's one-click status buttons; the card, the project status and everyone else's board update live. Edit in a drawer (Esc closes it), add dependencies (cycles rejected), filter by sprint, a warning if you add a task whose title already exists, full activity log | Board tab |
 | AI planner | One sentence → draft plan (sprints, tasks, estimates, dependencies). Labelled "AI Generated" or "Cached Plan". Admin applies it. | Plan tab |
 | Estimate check | A model trained on 23,000 real Jira issues suggests hours next to the LLM's; large disagreements are flagged | Plan tab |
 | Assignment | Optimal task → person matching with a plain-English reason for every row | Team tab |
@@ -152,7 +152,7 @@ python -m seed.seed_demo --verify
 
 ```bash
 cd backend
-python -m pytest tests -q                                                        # SQLite, in memory: 255 tests
+python -m pytest tests -q                                                        # SQLite, in memory: 257 tests
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
 
@@ -255,6 +255,7 @@ Plain-language versions of what the code does (the exact definitions are in `PRO
 * **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, set the `DEMO_PASSWORD` environment variable when seeding a public deployment (see Deployment step D), and never put real data in that database.
 * **Permissions are coarse**: any project member may edit project details and add *regular* members; only admins can add admins, remove members, change roles, delete the project or apply AI plans/assignments.
 * **Work due today counts as late**: if a project's due date is today and any work is left, the forecast reports a 100 % chance of being late (late means "finishes after the due date").
+* **Project status is derived, not typed**: with tasks, it is *Completed* when all are done, *In Progress* once any is started or done, otherwise *Pending*; a project with no tasks keeps the status set when it was created.
 * **Single JavaScript bundle**: the production build is one ~900 kB chunk (no code splitting); fine on a laptop, slower on a weak connection.
 * **Free hosting**: Render's free tier sleeps when idle (30–60 s wake-up) and Neon's free tier may pause the database.
 

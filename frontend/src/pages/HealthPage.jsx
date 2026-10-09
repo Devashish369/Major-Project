@@ -90,7 +90,7 @@ export default function HealthPage() {
 
         {/* Footer */}
         <p className="mt-6 text-center text-xs text-slate-600">
-          IntelliPM · M0 skeleton · {today}
+          IntelliPM · system status · {today}
         </p>
       </div>
     </div>

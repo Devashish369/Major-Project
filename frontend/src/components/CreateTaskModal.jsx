@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { X, Plus, Loader2 } from 'lucide-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
-import { createTask } from '../api/tasks';
+import { createTask, listTasks } from '../api/tasks';
 import { listMembers } from '../api/projects';
 
 export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onClose }) {
@@ -21,6 +21,12 @@ export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onC
     queryKey: ['members', projectId],
     queryFn: () => listMembers(projectId),
   });
+
+  // Existing tasks (cached from the Board) – used to warn about accidental duplicates
+  const { data: existing = [] } = useQuery({ queryKey: ['tasks', projectId], queryFn: () => listTasks(projectId) });
+  const typed = form.title.trim().toLowerCase();
+  const duplicate = typed ? existing.find((t) => t.title.trim().toLowerCase() === typed) : null;
+  const STATUS_TEXT = { todo: 'To Do', in_progress: 'In Progress', done: 'Done' };
 
   const mut = useMutation({
     mutationFn: (data) => createTask(projectId, data),
@@ -59,7 +65,7 @@ export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onC
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-700">
           <div className="flex items-center gap-2.5">
             <Plus className="h-5 w-5 text-indigo-400" />
-            <h2 className="text-base font-semibold text-white">New Task</h2>
+            <h2 className="text-base font-semibold text-white">New Task <span className="font-normal text-slate-400">in {STATUS_TEXT[form.status] ?? 'To Do'}</span></h2>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">
             <X className="h-5 w-5" />
@@ -83,6 +89,12 @@ export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onC
               placeholder="e.g. Design user login screen"
               className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
             />
+            {duplicate && (
+              <p id="duplicate-warning" className="mt-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                A task called “{duplicate.title}” already exists (#{duplicate.id}, {STATUS_TEXT[duplicate.status]}).
+                To change its progress, drag it to another column or open it and use the status buttons – no need to add it again.
+              </p>
+            )}
           </div>
 
           {/* Description */}

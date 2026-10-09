@@ -18,6 +18,8 @@ import {
   useSensors,
   DragOverlay,
   closestCenter,
+  pointerWithin,
+  useDroppable,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -28,6 +30,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Clock, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import { updateTask } from '../api/tasks';
+import { listMembers } from '../api/projects';
 import { listSprints } from '../api/sprints';
 import TaskDrawer from './TaskDrawer';
 import CreateTaskModal from './CreateTaskModal';
@@ -44,8 +47,18 @@ const PRIORITY_LEFT = {
   high: 'border-l-orange-500', critical: 'border-l-red-500',
 };
 
+// "Priya Nair" -> "PN" (shown on cards instead of a raw user id)
+const initials = (name) => (name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('');
+
+// Collision rule: the column/card under the mouse pointer wins; fall back to the closest card.
+// (Plain closestCenter only ever saw cards, so an EMPTY column could never be a drop target.)
+function boardCollisions(args) {
+  const hits = pointerWithin(args);
+  return hits.length ? hits : closestCenter(args);
+}
+
 // ── Sortable Task Card ────────────────────────────────────────────────────────
-function TaskCard({ task, onClick, sprintName }) {
+function TaskCard({ task, onClick, sprintName, assigneeName }) {
   const {
     attributes, listeners, setNodeRef,
     transform, transition, isDragging: localDragging,
@@ -82,8 +95,9 @@ function TaskCard({ task, onClick, sprintName }) {
           {task.estimate_hours && <span>{task.estimate_hours}h</span>}
           {task.due_date && <span>{task.due_date}</span>}
           {task.assignee_id && (
-            <span className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs">
-              {task.assignee_id}
+            <span title={assigneeName || `User ${task.assignee_id}`}
+              className="w-5 h-5 rounded-full bg-indigo-600 flex items-center justify-center text-white text-[9px] font-semibold">
+              {initials(assigneeName)}
             </span>
           )}
         </div>
@@ -98,10 +112,16 @@ function TaskCard({ task, onClick, sprintName }) {
 }
 
 // ── Column ────────────────────────────────────────────────────────────────────
-function Column({ column, tasks, onCardClick, onAddTask, sprintNames }) {
+function Column({ column, tasks, onCardClick, onAddTask, sprintNames, memberNames }) {
   const Icon = column.icon;
+  // The whole column is a drop target (even when it has no cards), identified by its status id.
+  const { setNodeRef, isOver } = useDroppable({ id: column.id });
   return (
-    <div className={`flex flex-col min-h-[400px] rounded-xl border border-slate-700 bg-slate-800/50 border-t-4 ${column.color}`}>
+    <div
+      ref={setNodeRef}
+      className={`flex flex-col min-h-[400px] rounded-xl border bg-slate-800/50 border-t-4 transition-colors ${column.color}
+        ${isOver ? 'border-indigo-400 bg-indigo-500/10' : 'border-slate-700'}`}
+    >
       {/* Column header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
         <div className="flex items-center gap-2">
@@ -123,9 +143,15 @@ function Column({ column, tasks, onCardClick, onAddTask, sprintNames }) {
       <div className="flex-1 p-3 space-y-2">
         <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
           {tasks.map((task) => (
-            <TaskCard key={task.id} task={task} onClick={onCardClick} sprintName={sprintNames[task.sprint_id]} />
+            <TaskCard key={task.id} task={task} onClick={onCardClick} sprintName={sprintNames[task.sprint_id]}
+              assigneeName={memberNames[task.assignee_id]} />
           ))}
         </SortableContext>
+        {tasks.length === 0 && (
+          <p className="rounded-lg border border-dashed border-slate-700 py-8 text-center text-xs text-slate-500">
+            Drag a task here, or click + to add one
+          </p>
+        )}
       </div>
     </div>
   );
@@ -145,6 +171,8 @@ export default function KanbanBoard({ tasks, projectId }) {
     queryFn: () => listSprints(projectId),
   });
   const sprintNames = Object.fromEntries(sprints.map((s) => [s.id, s.name]));
+  const { data: members = [] } = useQuery({ queryKey: ['members', projectId], queryFn: () => listMembers(projectId) });
+  const memberNames = Object.fromEntries(members.map((m) => [m.user_id, m.full_name]));
   const visibleTasks = tasks.filter((t) =>
     sprintFilter === 'all' ? true : sprintFilter === 'none' ? !t.sprint_id : t.sprint_id === Number(sprintFilter));
 
@@ -195,7 +223,7 @@ export default function KanbanBoard({ tasks, projectId }) {
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={closestCenter}
+        collisionDetection={boardCollisions}
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
@@ -221,6 +249,7 @@ export default function KanbanBoard({ tasks, projectId }) {
               onCardClick={(t) => setSelectedTask(t)}
               onAddTask={(status) => setCreateStatus(status)}
               sprintNames={sprintNames}
+              memberNames={memberNames}
             />
           ))}
         </div>

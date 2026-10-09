@@ -5,7 +5,7 @@
  * due date, required skills, dependencies, and lets the user edit any field.
  * Opens from the Kanban board when a card is clicked.
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Trash2, Plus, Minus, Loader2, Link2 } from 'lucide-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { updateTask, deleteTask, addDependency, removeDependency } from '../api/tasks';
@@ -37,6 +37,22 @@ export default function TaskDrawer({ task, projectId, tasks, onClose }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['tasks', projectId] });
       setEditing(false);
+    },
+  });
+
+  // Escape closes the drawer (expected behaviour for a side panel)
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
+
+  // Quick status change from the drawer (same PATCH the drag-and-drop uses)
+  const statusMut = useMutation({
+    mutationFn: (status) => updateTask(task.id, { status }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['tasks', projectId] });
+      qc.invalidateQueries({ queryKey: ['project', projectId] });
     },
   });
 
@@ -145,9 +161,23 @@ export default function TaskDrawer({ task, projectId, tasks, onClose }) {
               ))}
             </select>
           ) : (
-            <span className="inline-flex items-center text-xs px-2 py-0.5 rounded-full bg-slate-700 text-slate-300 font-medium">
-              {STATUS_LABELS[task.status]}
-            </span>
+            // One-click status: no need to press Edit or drag the card (also works on touch screens)
+            <div className="inline-flex rounded-lg border border-slate-600 overflow-hidden" role="group" aria-label="Task status">
+              {Object.entries(STATUS_LABELS).map(([val, label]) => (
+                <button
+                  key={val}
+                  type="button"
+                  data-status-btn={val}
+                  disabled={statusMut.isPending}
+                  onClick={() => task.status !== val && statusMut.mutate(val)}
+                  className={`px-3 py-1.5 text-xs font-medium transition ${
+                    task.status === val ? 'bg-indigo-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
           )}
 
           {/* Description */}

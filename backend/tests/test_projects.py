@@ -322,3 +322,32 @@ class TestProjectDeleteCascades:
         members = client.get(f"/api/v1/projects/{nid}/members", headers=auth(c)).json()["data"]
         assert [m["email"] for m in members] == ["casc_c@x.com"]
         assert client.get(f"/api/v1/projects/{nid}/tasks", headers=auth(c)).json()["data"] == []
+
+
+# ── Project status follows the tasks (dynamic, not a stale stored field) ──────
+
+class TestProjectStatusIsDerived:
+    def test_pure_rules(self):
+        from app.services.tasks import derive_project_status as d
+        assert d("pending", []) == "pending" and d("in_progress", []) == "in_progress"   # no tasks: keep stored
+        assert d("in_progress", ["todo", "todo"]) == "pending"
+        assert d("pending", ["todo", "in_progress"]) == "in_progress"
+        assert d("pending", ["todo", "done"]) == "in_progress"
+        assert d("in_progress", ["done", "done"]) == "completed"
+
+    def test_status_follows_board_moves(self, client):
+        tok = register(client, "dyn@s.com", "dynuser")
+        pid = create_project(client, tok).json()["data"]["id"]
+        status = lambda: client.get(f"/api/v1/projects/{pid}", headers=auth(tok)).json()["data"]["status"]
+        a = client.post(f"/api/v1/projects/{pid}/tasks", json={"title": "A"}, headers=auth(tok)).json()["data"]["id"]
+        b = client.post(f"/api/v1/projects/{pid}/tasks", json={"title": "B"}, headers=auth(tok)).json()["data"]["id"]
+        assert status() == "pending"
+        client.patch(f"/api/v1/tasks/{a}", json={"status": "in_progress"}, headers=auth(tok))
+        assert status() == "in_progress"
+        client.patch(f"/api/v1/tasks/{a}", json={"status": "done"}, headers=auth(tok))
+        client.patch(f"/api/v1/tasks/{b}", json={"status": "done"}, headers=auth(tok))
+        assert status() == "completed"
+        listed = [p for p in client.get("/api/v1/projects", headers=auth(tok)).json()["data"] if p["id"] == pid][0]
+        assert listed["status"] == "completed"                 # the dashboard card uses the same value
+        client.patch(f"/api/v1/tasks/{b}", json={"status": "todo"}, headers=auth(tok))
+        assert status() == "in_progress"                       # reopening a task reopens the project
