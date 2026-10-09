@@ -10,6 +10,7 @@ import { X, Trash2, Plus, Minus, Loader2, Link2 } from 'lucide-react';
 import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import { updateTask, deleteTask, addDependency, removeDependency } from '../api/tasks';
 import { listMembers } from '../api/projects';
+import { errorMessage } from '../api/errors';
 
 const PRIORITY_COLORS = {
   low: 'text-slate-400', medium: 'text-amber-400',
@@ -72,7 +73,7 @@ export default function TaskDrawer({ task, projectId, tasks, onClose }) {
       setDepInput('');
       setDepError('');
     },
-    onError: (e) => setDepError(e.response?.data?.detail || 'Failed to add dependency.'),
+    onError: (e) => setDepError(errorMessage(e, 'Failed to add dependency.')),
   });
 
   const removeDepMut = useMutation({

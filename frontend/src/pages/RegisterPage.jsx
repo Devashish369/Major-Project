@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Loader2, Eye, EyeOff, BarChart2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { errorMessage } from '../api/errors';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -29,7 +30,11 @@ export default function RegisterPage() {
     e.preventDefault();
     setError('');
 
-    // Client-side password confirmation check
+    // Client-side checks first, so the user gets a plain-language message without a round trip
+    if (!/^[A-Za-z0-9_]{3,50}$/.test(form.username.trim())) {
+      setError('Username must be 3–50 characters: letters, numbers and underscores only (no @, spaces or dots).');
+      return;
+    }
     if (form.password !== form.confirm) {
       setError("Passwords don't match.");
       return;
@@ -40,11 +45,7 @@ export default function RegisterPage() {
       await register(form.email, form.username, form.full_name, form.password);
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      const msg =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        'Registration failed. Please try again.';
-      setError(msg);
+      setError(errorMessage(err, 'Registration failed. Please try again.'));
     } finally {
       setLoading(false);
     }
@@ -56,7 +57,8 @@ export default function RegisterPage() {
     { id: 'reg-email', name: 'email', label: 'Email', type: 'email',
       placeholder: 'you@example.com', autoComplete: 'email' },
     { id: 'reg-username', name: 'username', label: 'Username', type: 'text',
-      placeholder: 'ada_codes', autoComplete: 'username' },
+      placeholder: 'ada_codes', autoComplete: 'username',
+      hint: 'Letters, numbers and underscores only (3–50 characters), e.g. aditya_p' },
   ];
 
   return (
@@ -77,13 +79,13 @@ export default function RegisterPage() {
           <p className="text-sm text-slate-400 mb-6">Get started with IntelliPM for free</p>
 
           {error && (
-            <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
+            <div role="alert" className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-400">
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {fields.map(({ id, name, label, type, placeholder, autoComplete }) => (
+            {fields.map(({ id, name, label, type, placeholder, autoComplete, hint }) => (
               <div key={name}>
                 <label htmlFor={id} className="block text-sm font-medium text-slate-300 mb-1.5">
                   {label}
@@ -99,6 +101,7 @@ export default function RegisterPage() {
                   placeholder={placeholder}
                   className="w-full rounded-lg border border-slate-600 bg-slate-900 px-3.5 py-2.5 text-sm text-white placeholder-slate-500 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition"
                 />
+                {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
               </div>
             ))}
 

@@ -26,6 +26,7 @@ import GraphTab from '../components/GraphTab';
 import DecisionsTab from '../components/DecisionsTab';
 import ReportTab from '../components/ReportTab';
 import useProjectSocket from '../hooks/useProjectSocket';
+import { errorMessage } from '../api/errors';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
@@ -114,7 +115,7 @@ function RecommendPanel({ projectId, members, isAdmin }) {
       setApplied(true);
       setApplyErr('');
     },
-    onError: (e) => setApplyErr(e.response?.data?.detail || 'Failed to apply.'),
+    onError: (e) => setApplyErr(errorMessage(e, 'Failed to apply.')),
   });
 
   return (
@@ -369,7 +370,7 @@ function TeamTab({ projectId, isAdmin, currentUserId }) {
           onClose={() => setShowAdd(false)}
           onSubmit={(data) => addMut.mutate(data)}
           loading={addMut.isPending}
-          error={addMut.error?.response?.data?.detail || addMut.error?.message}
+          error={addMut.error ? errorMessage(addMut.error) : undefined}
         />
       )}
     </div>

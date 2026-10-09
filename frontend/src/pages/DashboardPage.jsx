@@ -21,6 +21,7 @@ import { useAuth } from '../context/AuthContext';
 import { listProjects, createProject } from '../api/projects';
 import CreateProjectModal from '../components/CreateProjectModal';
 import SkillsEditor from '../components/SkillsEditor';
+import { errorMessage } from '../api/errors';
 
 // ── Status badge helper ───────────────────────────────────────────────────────
 const STATUS_CONFIG = {
@@ -254,7 +255,7 @@ export default function DashboardPage() {
           onClose={() => setShowCreate(false)}
           onSubmit={(data) => createMut.mutate(data)}
           loading={createMut.isPending}
-          error={createMut.error?.response?.data?.detail || createMut.error?.message}
+          error={createMut.error ? errorMessage(createMut.error) : undefined}
         />
       )}
 

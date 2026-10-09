@@ -76,7 +76,7 @@ For a classroom or a small team, yes. Beyond that there are three limits:
 The database layer already runs on PostgreSQL with only `DATABASE_URL` changed.
 
 **16. How did you test it?**
-- 257 automated tests, passing on both SQLite and PostgreSQL.
+- 258 automated tests, passing on both SQLite and PostgreSQL.
 - A seed script that rebuilds 16 demo projects and checks each tells its designed story (16/16).
 - Failure-mode runs without the LLM.
 - An endpoint sweep, the permission matrix, and a click-through of the demo script.

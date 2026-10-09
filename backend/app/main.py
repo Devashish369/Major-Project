@@ -89,7 +89,8 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException) 
 async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
     """422: the request body / params did not match the schema."""
     errors = [
-        {"field": ".".join(str(p) for p in e["loc"] if p != "body"), "message": e["msg"]}
+        {"field": ".".join(str(p) for p in e["loc"] if p != "body"),
+         "message": e["msg"].removeprefix("Value error, ")}
         for e in exc.errors()
     ]
     summary = "; ".join(f"{e['field']}: {e['message']}" if e["field"] else e["message"] for e in errors)

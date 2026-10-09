@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { generatePlan, applyPlan } from '../api/ai';
 import { estimateTask } from '../api/estimator';
+import { errorMessage } from '../api/errors';
 
 const PRIORITY_COLORS = {
   low: 'text-slate-400', medium: 'text-amber-400',
@@ -227,7 +228,7 @@ export default function PlanTab({ projectId, isAdmin }) {
       setApplied(true);
       setApplyError('');
     },
-    onError: (e) => setApplyError(e.response?.data?.detail || 'Failed to apply plan.'),
+    onError: (e) => setApplyError(errorMessage(e, 'Failed to apply plan.')),
   });
 
   return (
@@ -297,7 +298,7 @@ export default function PlanTab({ projectId, isAdmin }) {
 
         {generateMut.isError && (
           <div className="mt-3 rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-2.5 text-sm text-red-400">
-            {generateMut.error?.response?.data?.detail || 'Failed to generate plan. Check your API key.'}
+            {errorMessage(generateMut.error, 'Failed to generate plan. Please try again.')}
           </div>
         )}
       </div>
