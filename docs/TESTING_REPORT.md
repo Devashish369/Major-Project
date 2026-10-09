@@ -51,7 +51,7 @@ cd ../frontend && npm run build && npm run lint
 | SQLite (in memory) | **260 passed**, 0 failed, 0 skipped |
 | PostgreSQL 18.4 | **260 passed**, 0 failed, 0 skipped |
 
-Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 258).
+Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 260; also register, account-switch and owner-adds-member journeys: 8/8, 9/9, 6/6).
 
 Frontend: `npm run build` succeeds; `npm run lint` **0 warnings, 0 errors** (was 16 warnings before the clean-up). The frontend has no unit-test runner; its behaviour was checked by the browser walk-through (section 8) and the manual UAT table.
 
