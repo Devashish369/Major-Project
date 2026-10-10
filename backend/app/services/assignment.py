@@ -100,6 +100,9 @@ class AssignmentResult:
     performance: float
     score: float
     reason: str
+    # Every active member's scores for this task at the moment it was assigned (best first), so an
+    # admin who picks someone else sees that person's numbers too.  The chosen member is included.
+    alternatives: list = field(default_factory=list)
 
 
 # ── Score computation ─────────────────────────────────────────────────────────
@@ -237,6 +240,17 @@ def recommend_assignments(
             sm, av, perf = sm_cache[(ri, ci)]
             s = _score(sm, av, perf)
 
+            alternatives = []
+            for other in active_members:
+                o_sm, o_av = _skill_match(task, other), _availability(task, other)
+                o_perf = other.on_time_rate
+                alternatives.append({
+                    "user_id": other.user_id,
+                    "skill_match": round(o_sm, 4), "availability": round(o_av, 4),
+                    "performance": round(o_perf, 4), "score": round(_score(o_sm, o_av, o_perf), 4),
+                })
+            alternatives.sort(key=lambda a: (-a["score"], a["user_id"]))
+
             results.append(AssignmentResult(
                 task_id=task.task_id,
                 user_id=member.user_id,
@@ -245,6 +259,7 @@ def recommend_assignments(
                 performance=round(perf, 4),
                 score=round(s, 4),
                 reason=_reason(sm, av, perf),
+                alternatives=alternatives,
             ))
 
             # Accumulate load changes for this batch

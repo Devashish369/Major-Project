@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { UserPlus, Loader2, Eye, EyeOff, BarChart2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { errorMessage } from '../api/errors';
+import { passwordProblem } from '../api/passwordPolicy';
 
 export default function RegisterPage() {
   const { register } = useAuth();
@@ -33,6 +34,11 @@ export default function RegisterPage() {
     // Client-side checks first, so the user gets a plain-language message without a round trip
     if (!/^[A-Za-z0-9_]{3,50}$/.test(form.username.trim())) {
       setError('Username must be 3–50 characters: letters, numbers and underscores only (no @, spaces or dots).');
+      return;
+    }
+    const pwProblem = passwordProblem(form.password, { username: form.username.trim(), email: form.email.trim() });
+    if (pwProblem) {
+      setError(pwProblem);
       return;
     }
     if (form.password !== form.confirm) {
@@ -118,6 +124,8 @@ export default function RegisterPage() {
                   autoComplete="new-password"
                   required
                   minLength={8}
+                  maxLength={72}
+                  aria-describedby="password-hint"
                   value={form.password}
                   onChange={handleChange}
                   placeholder="••••••••"
@@ -132,6 +140,7 @@ export default function RegisterPage() {
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+              <p id="password-hint" className="mt-1 text-xs text-slate-500">At least 8 characters with a letter and a number; not a common password.</p>
             </div>
 
             {/* Confirm password */}

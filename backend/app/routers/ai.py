@@ -20,6 +20,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.deps import get_current_user, require_admin
+from app.ratelimit import limit
 from app.models import ActivityLog, Project, ProjectMember, Sprint, Task, TaskDependency
 from app.schemas import GeneratePlanRequest, ApplyPlanRequest, EstimateRequest
 from pydantic import ValidationError
@@ -39,7 +40,7 @@ router = APIRouter(tags=["ai"])
 @router.post("/ai/generate-plan")
 def api_generate_plan(
     body: GeneratePlanRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(limit("generate_plan", 10, 600)),   # protects the free LLM quota
 ):
     """
     Generate a project plan draft. Does NOT save anything to the database.
@@ -184,7 +185,7 @@ def apply_plan(
 @router.post("/ai/estimate")
 def estimate(
     body: EstimateRequest,
-    current_user=Depends(get_current_user),
+    current_user=Depends(limit("estimate", 60, 600)),
 ):
     """
     Predict story_points and hours for a given task title + description.

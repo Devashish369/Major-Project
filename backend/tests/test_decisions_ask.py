@@ -25,7 +25,7 @@ def auth(tok):
 
 def register(client, name):
     r = client.post(f"{API}/auth/register", json={
-        "email": f"{name}@t.com", "username": name, "full_name": name.title(), "password": "password123"})
+        "email": f"{name}@t.com", "username": name, "full_name": name.title(), "password": "Secure#2026"})
     assert r.status_code == 201
     return r.json()["data"]["access_token"]
 
@@ -126,8 +126,8 @@ class TestAsk:
         assert r.status_code == 200
         data = r.json()["data"]
         assert "PostgreSQL" in data["answer"]
-        assert {"type": "decision", "id": did} in data["sources"]
-        assert {"type": "task", "id": tid} in data["sources"]
+        assert ("decision", did) in [(x["type"], x["id"]) for x in data["sources"]]
+        assert ("task", tid) in [(x["type"], x["id"]) for x in data["sources"]]
         assert all(s["id"] != 9999 for s in data["sources"])        # invented id dropped
 
     def test_prompt_contains_project_data_and_strict_system_prompt(self, client, world, llm):
@@ -154,9 +154,9 @@ class TestAsk:
     def test_fenced_json_and_plain_text_are_handled(self, client, world, llm):
         did = world["did"]
         llm.reply = "```json\n" + json.dumps({"answer": f"See [D{did}]", "sources": []}) + "\n```"
-        assert ask(client, world).json()["data"]["sources"] == [{"type": "decision", "id": did}]
+        assert ask(client, world).json()["data"]["sources"] == [{"type": "decision", "id": did, "number": 1}]
         llm.reply = f"Plain text answer citing D{did}."
-        assert ask(client, world).json()["data"]["sources"] == [{"type": "decision", "id": did}]
+        assert ask(client, world).json()["data"]["sources"] == [{"type": "decision", "id": did, "number": 1}]
 
     def test_fallback_provider_used_when_primary_fails(self, client, world, llm, monkeypatch):
         monkeypatch.setattr(ask_mod.settings, "LLM_FALLBACK_API_KEY", "k2")
@@ -207,5 +207,5 @@ class TestContext:
             db.close()
         assert len(text) <= ask_mod.MAX_CONTEXT_CHARS + 200
         assert "more omitted" in text
-        assert f"D{world['did']}" in valid                              # decisions are kept first
+        assert any(s["type"] == "decision" and s["id"] == world["did"] for s in valid.values())                              # decisions are kept first
         assert sum(1 for t in valid if t.startswith("A")) <= ask_mod.MAX_ACTIVITY_ROWS

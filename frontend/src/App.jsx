@@ -24,6 +24,7 @@ import ProjectPage from './pages/ProjectPage';
 import { Suspense, lazy, useEffect } from 'react';
 import apiClient from './api/client';
 const BenchmarksPage = lazy(() => import('./pages/BenchmarksPage'));
+const SecurityPage = lazy(() => import('./pages/SecurityPage'));
 import ErrorBoundary from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
@@ -64,6 +65,16 @@ export default function App() {
               element={
                 <ProtectedRoute>
                   <ProjectPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Account security: sign-in activity, change password, sign out everywhere */}
+            <Route
+              path="/security"
+              element={
+                <ProtectedRoute>
+                  <Suspense fallback={null}><SecurityPage /></Suspense>
                 </ProtectedRoute>
               }
             />

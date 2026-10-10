@@ -10,7 +10,7 @@ def check(name, ok): results.append(ok); print(("PASS " if ok else "FAIL ") + na
 
 def register(page, full, email, user):
     page.goto(WEB + "/register"); page.wait_for_load_state("networkidle")
-    for i, v in enumerate([full, email, user, "password123", "password123"]): page.locator("form input").nth(i).fill(v)
+    for i, v in enumerate([full, email, user, "Secure#2026", "Secure#2026"]): page.locator("form input").nth(i).fill(v)
     page.get_by_role("button", name="Create account").click(); page.wait_for_url("**/dashboard"); page.wait_for_load_state("networkidle"); time.sleep(1)
 
 def titles(page):

@@ -17,3 +17,9 @@ export const getWorkload = (projectId) =>
   apiClient
     .get(`/projects/${projectId}/analytics/workload`)
     .then((r) => r.data.data);
+
+// Skills open tasks need that nobody has, with who should learn each one
+export const getSkillGaps = (projectId) =>
+  apiClient
+    .get(`/projects/${projectId}/assignments/skill-gaps`)
+    .then((r) => r.data.data);

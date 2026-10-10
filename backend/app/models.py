@@ -17,7 +17,7 @@ from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import (
-    JSON, DateTime, Float, ForeignKey, Integer, String,
+    JSON, DateTime, Float, ForeignKey, Index, Integer, String,
     UniqueConstraint, func,
 )
 from sqlalchemy.orm import Mapped, mapped_column
@@ -51,6 +51,9 @@ class User(Base):
 
     skills: Mapped[Optional[dict]] = mapped_column(JSON, nullable=True, default=dict)
     on_time_rate: Mapped[float] = mapped_column(Float, nullable=False, default=0.7)
+    # Bumped on password change / "sign out everywhere": every token carries the version it was
+    # issued with, so older tokens stop working at once (see deps.get_current_user).
+    token_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
 
 # ── Projects ──────────────────────────────────────────────────────────────────
@@ -79,6 +82,11 @@ class Project(Base):
     created_by: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True
     )
+
+    # Last task / decision number handed out in THIS project (tasks are #1, #2 … per project).
+    # Counters, not max()+1, so a deleted task's number is never reused.  See app/numbering.py.
+    task_seq: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    decision_seq: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
 
 
 class ProjectMember(Base):
@@ -166,6 +174,12 @@ class Task(Base):
 
     # Optional module label for AI planner grouping (spec §6)
     module: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+
+    # Number shown to people (#1, #2 …), counted per project.  `id` stays the internal key
+    # used in URLs and dependencies.  Filled automatically on insert (app/numbering.py).
+    number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    __table_args__ = (Index("uq_task_project_number", "project_id", "number", unique=True),)
 
 
 class TaskDependency(Base):
@@ -278,3 +292,36 @@ class Decision(Base):
     related_task_id: Mapped[Optional[int]] = mapped_column(
         Integer, ForeignKey("tasks.id", ondelete="SET NULL"), nullable=True
     )
+    # Shown as D1, D2 … per project (filled automatically on insert, app/numbering.py)
+    number: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+    __table_args__ = (Index("uq_decision_project_number", "project_id", "number", unique=True),)
+
+
+# ── Security events (sign-in audit trail, brute-force protection) ────────────
+class SecurityEvent(Base):
+    """
+    security_events table – who tried to sign in, from where, and what happened.
+
+    event: login_success | login_failed | login_blocked | register | password_changed |
+           sessions_revoked
+    Used for (1) brute-force protection: recent failures are counted here, so limits survive a
+    restart, and (2) the user's own "Recent sign-in activity" list (digital forensics).
+    """
+    __tablename__ = "security_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False, index=True
+    )
+    user_id: Mapped[Optional[int]] = mapped_column(
+        Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=True, index=True
+    )
+    email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True, index=True)
+    event: Mapped[str] = mapped_column(String(32), nullable=False)
+    ip: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    user_agent: Mapped[Optional[str]] = mapped_column(String(300), nullable=True)
+
+
+# Per-project numbering of tasks and decisions (registers a before_flush hook)
+import app.numbering  # noqa: E402,F401

@@ -51,6 +51,8 @@ async def lifespan(app: FastAPI):
     """Create all DB tables on startup. Clean shutdown on exit."""
     import app.models  # noqa: F401 – registers all ORM models with Base.metadata
     Base.metadata.create_all(bind=engine)
+    from app.migrations import upgrade
+    upgrade(engine)   # add columns that create_all cannot add to existing tables
     # Load the ML models in the background NOW, so the first person to open Analytics does not
     # wait for scikit-learn to import and the models to unpickle (several seconds on a free server).
     threading.Thread(target=_warm_models, daemon=True, name="warm-models").start()
@@ -65,6 +67,10 @@ app = FastAPI(
     lifespan=lifespan,   # modern replacement for @app.on_event("startup")
 )
 
+# Security headers, 1 MB body limit, Server-Timing (app/middleware.py)
+from app.middleware import SecurityAndTimingMiddleware  # noqa: E402
+app.add_middleware(SecurityAndTimingMiddleware)
+
 # Compress JSON responses over 1 KB (a 30-task list shrinks ~5x): less data over the internet
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
@@ -73,8 +79,12 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_origins_list,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
+    expose_headers=["Server-Timing", "Retry-After"],
+    # Browsers ask permission (an extra "preflight" round trip) before each cross-origin call that
+    # carries a token; let them remember the answer for 2 h (Chrome's maximum) instead of 10 min.
+    max_age=7200,
 )
 
 # ── Response envelope helpers ─────────────────────────────────────────────────
@@ -171,3 +181,29 @@ def health_check():
     M0 done-when test; also used by frontend to check connectivity.
     """
     return ok(data={"status": "ok"})
+
+
+_db_probe = {"at": 0.0, "data": None}
+
+
+@app.get("/api/v1/health/db", tags=["health"])
+def health_db():
+    """
+    Database round-trip time in ms (median of 3 "SELECT 1").  Shows whether the API and the
+    database are in the same region (≈1–3 ms) or not (≈30–80 ms).  Measured at most once a
+    minute; NOT for uptime pings (it wakes the database – use /api/v1/health for those).
+    """
+    import time as _time
+    from sqlalchemy import text as _text
+    now = _time.monotonic()
+    if _db_probe["data"] is None or now - _db_probe["at"] > 60:
+        times = []
+        with engine.connect() as conn:
+            conn.execute(_text("SELECT 1"))          # first one may include waking up / connecting
+            for _ in range(3):
+                t0 = _time.perf_counter()
+                conn.execute(_text("SELECT 1"))
+                times.append((_time.perf_counter() - t0) * 1000)
+        _db_probe.update(at=now, data={"db_round_trip_ms": round(sorted(times)[1], 1),
+                                       "database": "sqlite" if settings.is_sqlite else "postgresql"})
+    return ok(data=_db_probe["data"])

@@ -15,6 +15,9 @@ class Settings(BaseSettings):
     # ── JWT / Auth ────────────────────────────────────────────────────────────
     SECRET_KEY: str = "change-me-in-production"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 720
+    # New accounts allowed per network (IP) per hour – sign-up spam protection.  A whole class on
+    # one college Wi-Fi shares one IP, so keep this generous.
+    REGISTER_LIMIT_PER_HOUR: int = 30
 
     # ── CORS ──────────────────────────────────────────────────────────────────
     # Comma-separated list of allowed origins, e.g. "http://localhost:5173"

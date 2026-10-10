@@ -77,6 +77,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   }
 
+  /** After a password change the server issues a new token; older ones are revoked. */
+  function replaceToken(token) {
+    setToken(token);
+  }
+
   /** PATCH /auth/me – update name/skills, refresh local state. */
   async function updateProfile(updates) {
     const updated = await updateMe(updates);
@@ -85,7 +90,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateProfile, replaceToken }}>
       {children}
     </AuthContext.Provider>
   );

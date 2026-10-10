@@ -32,7 +32,7 @@ def client():
     return TestClient(app)
 
 
-def register(client, email, username, password="password123"):
+def register(client, email, username, password="Secure#2026"):
     r = client.post("/api/v1/auth/register", json={
         "email": email, "username": username,
         "full_name": f"User {username}", "password": password,

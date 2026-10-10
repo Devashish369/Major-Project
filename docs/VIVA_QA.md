@@ -65,7 +65,10 @@ Ask only sees this project's tasks, decisions and last 50 activity rows, each li
 - We ran a 47-check permission matrix.
 - The final review found and fixed a privilege-escalation bug (a member could add an admin) and an SQLite cascade bug.
 - Secrets live only in environment variables. The app refuses to start on PostgreSQL with the default secret key.
-- Limits: no rate limiting, no refresh tokens, and the demo login is public.
+- Sign-in is rate-limited (5 wrong passwords: a 15-minute pause) and every attempt is recorded; users see their own activity on the Security page.
+- Changing the password or "sign out everywhere" revokes every older token (a version number inside each token).
+- Security headers, a 1 MB request limit, a password policy, and per-user limits on the free AI quota. Details: `docs/SECURITY.md`.
+- Limits: no two-factor login, no e-mail password reset, and the demo login is public.
 
 **15. Does it scale?**
 For a classroom or a small team, yes. Beyond that there are three limits:
@@ -76,7 +79,7 @@ For a classroom or a small team, yes. Beyond that there are three limits:
 The database layer already runs on PostgreSQL with only `DATABASE_URL` changed.
 
 **16. How did you test it?**
-- 267 automated tests, passing on both SQLite and PostgreSQL.
+- 304 automated tests, passing on both SQLite and PostgreSQL (19 of them are attack tests: brute force, forged and revoked tokens, oversized input).
 - A seed script that rebuilds 16 demo projects and checks each tells its designed story (16/16).
 - Failure-mode runs without the LLM.
 - An endpoint sweep, the permission matrix, and a click-through of the demo script.
@@ -109,3 +112,18 @@ Each member should be ready to explain the module they reviewed most closely.
 - A verify script prints each project's designed vs actual health and delay band; all 16 match.
 - The same numbers appear in the Analytics tab, the Team tab and the Report, because the report calls the same code.
 - Anything uncertain is labelled: the ML card says experimental and simulated.
+
+**21. How does "Skills to learn" decide who should learn a skill?**
+A skill is a gap when an open task needs it and nobody on the team has it at level 1 or more (after synonyms, so "ReactJS" counts as React). Two people are suggested:
+- *Closest*: for each member, the best of `relatedness(missing skill, their skill) x (0.5 + 0.5 x level / 5)`. Relatedness comes from a hand-made map (`services/skills.py`): 1.0 same skill, explicit pairs such as RAG and Generative AI 0.9, 0.6 for the same family, 0.8 x the link between related families, otherwise shared words. Below 0.3 nobody counts as close.
+- *Lowest workload*: the same utilisation as the Team tab bars.
+No LLM is used, so the answer is deterministic and every number can be explained.
+
+**22. Can the manager override the AI?**
+Yes. Each recommendation row lists every member with their score for that task; the admin can pick someone else or leave the task unassigned, and the table then shows the chosen person's scores. On Apply, the activity log records who the AI had suggested and that the admin overrode it.
+
+**23. Why per-project task numbers when the database already has ids?**
+People expect "#1" to be the first task of *their* project. Each project keeps a counter, increased with one atomic `UPDATE ... RETURNING` in the same transaction as the insert (on PostgreSQL that locks the project row, so two people can't get the same number), plus a unique index as a safety net. Deleted numbers are not reused. The internal id is still used in URLs and the API.
+
+**24. Does it cost anything to run?**
+No. Render free web service + free static site, Neon free PostgreSQL, Groq and Gemini free keys, and GitHub Actions (free for public repos) for the keep-awake ping. Without a payment method on Render nothing can be billed: at a limit the service is paused. See `docs/FREE_TIER.md`.

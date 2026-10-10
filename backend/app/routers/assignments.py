@@ -27,6 +27,8 @@ from app.deps import get_current_user, get_membership, require_admin
 from app.models import Project, ProjectMember, Task, User
 from app.schemas import AssignmentRecommendRequest, AssignmentApplyRequest
 from app.services.assignment import MemberInfo, TaskInfo, recommend_assignments
+from app.services.skill_gaps import GapMember, compute_skill_gaps
+from app.services.skills import canonical, canonical_levels
 from app.services.workload import compute_workload
 from app.services.tasks import write_activity
 from app.services.realtime import emit_tasks
@@ -107,7 +109,7 @@ def recommend(
         MemberInfo(
             user_id=u.id,
             full_name=u.full_name,
-            skills=u.skills or {},
+            skills=canonical_levels(u.skills),   # "ReactJS" and "react" are the same skill
             capacity_hours_per_week=pm.capacity_hours_per_week,
             on_time_rate=u.on_time_rate,
             weeks_remaining=weeks,
@@ -133,17 +135,25 @@ def recommend(
             task_id=t.id,
             priority=t.priority,
             estimate_hours=t.estimate_hours or 8.0,
-            required_skills=[s.lower() for s in (t.required_skills or [])],
+            required_skills=[canonical(s) for s in (t.required_skills or []) if canonical(s)],
         )
         for t in candidate_tasks_orm
     ]
 
+    team_skills = {s for m in members for s, lv in m.skills.items() if lv >= 1}
+    by_id = {t.id: t for t in candidate_tasks_orm}
+    info_by_id = {t.task_id: t for t in tasks}
     results = recommend_assignments(tasks, members)
 
     return ok(
         data=[
             {
                 "task_id": r.task_id,
+                "task_number": by_id[r.task_id].number,
+                "task_title": by_id[r.task_id].title,
+                # required skills nobody has: shown with a link to the Skill gaps card
+                "missing_skills": [s for s in info_by_id[r.task_id].required_skills if s not in team_skills],
+                "alternatives": r.alternatives,
                 "user_id": r.user_id,
                 "skill_match": r.skill_match,
                 "availability": r.availability,
@@ -155,6 +165,39 @@ def recommend(
         ],
         message=f"{len(results)} task(s) assigned (not yet applied).",
     )
+
+
+# ── GET /projects/{id}/assignments/skill-gaps ─────────────────────────────────
+
+@router.get("/projects/{project_id}/assignments/skill-gaps")
+def skill_gaps(
+    project_id: int,
+    membership=Depends(get_membership),
+    db: Session = Depends(get_db),
+):
+    """
+    Skills that open tasks need but no member has, with who should learn each one:
+    the member with the most related existing skill, and the member with the lowest workload.
+    Read-only (services/skill_gaps.py explains the scoring).
+    """
+    project = db.execute(select(Project).where(Project.id == project_id)).scalar_one()
+    member_rows = _load_members(project_id, db)
+    all_tasks = db.execute(select(Task).where(Task.project_id == project_id)).scalars().all()
+    entries = compute_workload(
+        [{"user_id": u.id, "full_name": u.full_name, "capacity_hours_per_week": pm.capacity_hours_per_week}
+         for pm, u in member_rows],
+        [{"assignee_id": t.assignee_id, "status": t.status, "estimate_hours": t.estimate_hours or 0.0}
+         for t in all_tasks],
+        _weeks_remaining(project),
+    )
+    util = {e.user_id: e.utilization for e in entries}
+    members = [GapMember(user_id=u.id, full_name=u.full_name, skills=u.skills or {},
+                         utilization=util.get(u.id, 0.0), on_time_rate=u.on_time_rate)
+               for pm, u in member_rows]
+    open_tasks = [{"id": t.id, "number": t.number, "title": t.title, "required_skills": t.required_skills or []}
+                  for t in all_tasks if t.status != "done"]
+    gaps = compute_skill_gaps(open_tasks, members)
+    return ok(data=gaps, message=f"{len(gaps)} missing skill(s)." if gaps else "Every required skill is covered.")
 
 
 # ── POST /projects/{id}/assignments/apply ─────────────────────────────────────
@@ -177,38 +220,35 @@ def apply_assignments(
     Runs in one transaction.
     """
     applied = 0
+    overridden = 0
     changed_ids: list[int] = []
+    # two queries in total instead of two per assignment
+    wanted = {a.task_id for a in body.assignments}
+    tasks = {t.id: t for t in db.execute(
+        select(Task).where(Task.project_id == project_id, Task.id.in_(wanted or {0}))
+    ).scalars()}
+    member_ids = set(db.execute(
+        select(ProjectMember.user_id).where(ProjectMember.project_id == project_id)
+    ).scalars())
+
     for assignment in body.assignments:
-        task = db.execute(
-            select(Task).where(
-                Task.id == assignment["task_id"],
-                Task.project_id == project_id,
-            )
-        ).scalar_one_or_none()
+        task = tasks.get(assignment.task_id)
+        if task is None or assignment.user_id not in member_ids:
+            continue  # unknown task / not a member of this project: skipped, never applied
 
-        if task is None:
-            continue  # skip unknown task IDs silently
-
-        # Verify user is a project member
-        member = db.execute(
-            select(ProjectMember).where(
-                ProjectMember.project_id == project_id,
-                ProjectMember.user_id == assignment["user_id"],
-            )
-        ).scalar_one_or_none()
-
-        if member is None:
-            continue  # skip non-member assignments silently
-
-        task.assignee_id = assignment["user_id"]
+        task.assignee_id = assignment.user_id
         changed_ids.append(task.id)
+        meta = {"assignee_id": assignment.user_id}
+        if assignment.recommended_user_id is not None and assignment.recommended_user_id != assignment.user_id:
+            meta.update(recommended_user_id=assignment.recommended_user_id, overridden=True)
+            overridden += 1
         write_activity(
             db,
             project_id=project_id,
             user_id=current_user.id,
             action="task_assigned",
             task_id=task.id,
-            meta={"assignee_id": assignment["user_id"]},
+            meta=meta,
         )
         applied += 1
 
@@ -216,8 +256,9 @@ def apply_assignments(
     emit_tasks(db, project_id, "task_updated", changed_ids, current_user.id)
 
     return ok(
-        data={"applied": applied},
-        message=f"{applied} assignment(s) applied.",
+        data={"applied": applied, "overridden": overridden},
+        message=f"{applied} assignment(s) applied"
+                + (f" ({overridden} changed by the admin)." if overridden else "."),
     )
 
 

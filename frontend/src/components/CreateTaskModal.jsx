@@ -92,7 +92,7 @@ export default function CreateTaskModal({ projectId, defaultStatus = 'todo', onC
             />
             {duplicate && (
               <p id="duplicate-warning" className="mt-1.5 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
-                A task called “{duplicate.title}” already exists (#{duplicate.id}, {STATUS_TEXT[duplicate.status]}).
+                A task called “{duplicate.title}” already exists (#{duplicate.number ?? duplicate.id}, {STATUS_TEXT[duplicate.status]}).
                 To change its progress, drag it to another column or open it and use the status buttons – no need to add it again.
               </p>
             )}

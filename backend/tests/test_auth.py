@@ -29,7 +29,7 @@ def client():
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def register_user(client, email="test@example.com", username="testuser",
-                  full_name="Test User", password="password123"):
+                  full_name="Test User", password="Secure#2026"):
     return client.post("/api/v1/auth/register", json={
         "email": email,
         "username": username,
@@ -82,7 +82,7 @@ class TestLogin:
         register_user(client)
         res = client.post("/api/v1/auth/login", json={
             "email": "test@example.com",
-            "password": "password123",
+            "password": "Secure#2026",
         })
         assert res.status_code == 200
         body = res.json()
@@ -101,7 +101,7 @@ class TestLogin:
     def test_unknown_email_rejected(self, client):
         res = client.post("/api/v1/auth/login", json={
             "email": "nobody@example.com",
-            "password": "password123",
+            "password": "Secure#2026",
         })
         assert res.status_code == 401
 

@@ -64,7 +64,7 @@ def build_report(
     unassigned = [t for t in open_tasks if not t.get("assignee_id")]
 
     def _task_ref(t):
-        return {"id": t["id"], "title": t["title"], "status": t["status"],
+        return {"id": t["id"], "number": t.get("number") or t["id"], "title": t["title"], "status": t["status"],
                 "assignee": user_names.get(t.get("assignee_id")) if t.get("assignee_id") else None}
 
     task_stats = {
@@ -122,13 +122,14 @@ def build_report(
             top = by_id.get(top_id)
             if top:
                 n = blocks_count[top_id]
-                insights.append(f"Task #{top_id} '{top['title']}' ({top['status'].replace('_', ' ')}) blocks {n} open task{'s' if n > 1 else ''}.")
-                actions.append(f"Prioritise task #{top_id} '{top['title']}': finishing it unblocks {n} task{'s' if n > 1 else ''}.")
+                num = top.get("number") or top_id
+                insights.append(f"Task #{num} '{top['title']}' ({top['status'].replace('_', ' ')}) blocks {n} open task{'s' if n > 1 else ''}.")
+                actions.append(f"Prioritise task #{num} '{top['title']}': finishing it unblocks {n} task{'s' if n > 1 else ''}.")
         if overdue:
             first = overdue[0]
             late = (today - date.fromisoformat(first["due_date"])).days
             insights.append(f"{len(overdue)} open task{'s are' if len(overdue) > 1 else ' is'} past the due date.")
-            actions.append(f"Re-plan the overdue tasks, starting with #{first['id']} '{first['title']}' ({late} day{'s' if late != 1 else ''} late).")
+            actions.append(f"Re-plan the overdue tasks, starting with #{first.get('number') or first['id']} '{first['title']}' ({late} day{'s' if late != 1 else ''} late).")
         if unassigned:
             actions.append(f"{len(unassigned)} open task{'s have' if len(unassigned) > 1 else ' has'} no assignee: use Team > Recommend assignments.")
         if pen.get("slip", 0) > 0:

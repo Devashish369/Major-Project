@@ -86,7 +86,7 @@ function TaskCard({ task, onClick, sprintName, assigneeName }) {
       </p>
       <div className="flex items-center justify-between text-xs text-slate-500">
         <span className="flex items-center gap-1.5">
-          #{task.id}
+          #{task.number ?? task.id}
           {sprintName && (
             <span className="sprint-badge rounded bg-slate-700 px-1.5 py-0.5 text-[10px] text-slate-300">{sprintName}</span>
           )}

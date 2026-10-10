@@ -26,7 +26,7 @@ def client():
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def register(client, email, username, password="password123"):
+def register(client, email, username, password="Secure#2026"):
     r = client.post("/api/v1/auth/register", json={
         "email": email, "username": username,
         "full_name": "Test User", "password": password,
@@ -286,7 +286,7 @@ def test_assignee_must_be_project_member():
     from app.main import app
     c = TestClient(app)
     def reg(n):
-        r = c.post("/api/v1/auth/register", json={"email": f"{n}@asg.com", "username": n, "full_name": n, "password": "password123"})
+        r = c.post("/api/v1/auth/register", json={"email": f"{n}@asg.com", "username": n, "full_name": n, "password": "Secure#2026"})
         return {"Authorization": f"Bearer {r.json()['data']['access_token']}"}
     owner, outsider = reg("asgown"), reg("asgout")
     out_id = c.get("/api/v1/auth/me", headers=outsider).json()["data"]["id"]

@@ -72,7 +72,7 @@ function buildGraph(tasks) {
               {t.title}
             </div>
             <div style={{ fontSize: 10, opacity: 0.75, marginTop: 3 }}>
-              #{t.id} · {blocked ? 'Blocked' : STATUS_STYLE[t.status]?.label} · {t.estimate_hours ?? '?'}h
+              #{t.number ?? t.id} · {blocked ? 'Blocked' : STATUS_STYLE[t.status]?.label} · {t.estimate_hours ?? '?'}h
             </div>
           </div>
         ),
