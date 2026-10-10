@@ -97,7 +97,7 @@ export default function TaskDrawer({ task, projectId, tasks, onClose }) {
 
   function handleAddDep() {
     const depId = parseInt(depInput, 10);
-    if (!depId) { setDepError('Enter a valid task ID.'); return; }
+    if (!depId) { setDepError('Choose a task first.'); return; }
     setDepError('');
     addDepMut.mutate(depId);
   }
@@ -295,7 +295,7 @@ export default function TaskDrawer({ task, projectId, tasks, onClose }) {
               <ul className="space-y-1.5 mb-3">
                 {depTasks.map((dt) => (
                   <li key={dt.id} className="flex items-center justify-between text-sm rounded-lg border border-slate-700 bg-slate-800 px-3 py-2">
-                    <span className="text-white">#{dt.id} {dt.title}</span>
+                    <span className="text-white">#{dt.number ?? dt.id} {dt.title}</span>
                     <button
                       onClick={() => removeDepMut.mutate(dt.id)}
                       className="text-slate-500 hover:text-red-400 ml-2"
@@ -307,13 +307,19 @@ export default function TaskDrawer({ task, projectId, tasks, onClose }) {
               </ul>
             ) : <p className="text-xs text-slate-600 mb-3">No dependencies</p>}
             <div className="flex gap-2">
-              <input
-                placeholder="Task ID to depend on"
-                type="number"
+              {/* pick by number + title: people see #1, #2 … per project, the API uses the internal id */}
+              <select
+                id="dependency-picker"
+                aria-label="Task this one depends on"
                 value={depInput}
                 onChange={(e) => setDepInput(e.target.value)}
-                className="flex-1 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-white outline-none focus:border-indigo-500"
-              />
+                className="flex-1 min-w-0 rounded-lg border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-white outline-none focus:border-indigo-500"
+              >
+                <option value="">Depends on…</option>
+                {tasks
+                  .filter((t) => t.id !== task.id && !(task.dependencies || []).includes(t.id))
+                  .map((t) => <option key={t.id} value={t.id}>#{t.number ?? t.id} {t.title}</option>)}
+              </select>
               <button
                 onClick={handleAddDep}
                 className="rounded-lg bg-slate-700 hover:bg-indigo-600 px-3 py-1.5 text-sm text-white transition"

@@ -19,13 +19,15 @@ const fmt = (iso) => new Date(iso).toLocaleDateString(undefined, { year: 'numeri
 // ── Ask box ───────────────────────────────────────────────────────────────────
 
 function SourceChip({ source, decisions, tasks }) {
-  let Icon = Activity, label = `Activity #${source.id}`;
+  let Icon = Activity, label = 'Activity';
   if (source.type === 'task') {
     Icon = ListChecks;
-    label = `Task #${source.id}: ${tasks.find((t) => t.id === source.id)?.title ?? 'task'}`;
+    const t = tasks.find((x) => x.id === source.id);
+    label = `Task #${source.number ?? t?.number ?? source.id}: ${t?.title ?? 'task'}`;
   } else if (source.type === 'decision') {
     Icon = ScrollText;
-    label = `Decision #${source.id}: ${decisions.find((d) => d.id === source.id)?.title ?? 'decision'}`;
+    const d = decisions.find((x) => x.id === source.id);
+    label = `Decision D${source.number ?? d?.number ?? source.id}: ${d?.title ?? 'decision'}`;
   }
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-600 bg-slate-900 px-2.5 py-1 text-xs text-slate-300">
@@ -132,7 +134,7 @@ function AddDecisionForm({ projectId, tasks, onDone }) {
         value={form.reason} onChange={set('reason')} />
       <select className={input} value={form.related_task_id} onChange={set('related_task_id')}>
         <option value="">Related task (optional)</option>
-        {tasks.map((t) => <option key={t.id} value={t.id}>#{t.id} {t.title}</option>)}
+        {tasks.map((t) => <option key={t.id} value={t.id}>#{t.number ?? t.id} {t.title}</option>)}
       </select>
       {mut.isError && <p className="text-sm text-red-400">{errText(mut.error, 'Could not save the decision.')}</p>}
       <div className="flex justify-end gap-2">
@@ -210,7 +212,7 @@ export default function DecisionsTab({ projectId, tasks, isAdmin, currentUserId 
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <p className="font-medium text-white">
-                  <span className="text-xs text-slate-500 font-mono mr-2">D{d.id}</span>{d.title}
+                  <span className="text-xs text-slate-500 font-mono mr-2">D{d.number ?? d.id}</span>{d.title}
                 </p>
                 <p className="mt-1 text-sm text-slate-200 whitespace-pre-wrap">{d.decision}</p>
                 {d.reason && <p className="mt-1 text-sm text-slate-400 whitespace-pre-wrap"><span className="text-slate-500">Why:</span> {d.reason}</p>}
@@ -228,7 +230,7 @@ export default function DecisionsTab({ projectId, tasks, isAdmin, currentUserId 
             </div>
             <p className="mt-2 text-xs text-slate-500">
               {d.made_by_name || 'Unknown'} · {fmt(d.created_at)}
-              {d.related_task_id && <> · task #{d.related_task_id}{taskTitle(d.related_task_id) ? `: ${taskTitle(d.related_task_id)}` : ''}</>}
+              {d.related_task_id && <> · task #{tasks.find((t) => t.id === d.related_task_id)?.number ?? d.related_task_id}{taskTitle(d.related_task_id) ? `: ${taskTitle(d.related_task_id)}` : ''}</>}
             </p>
           </div>
         ))}

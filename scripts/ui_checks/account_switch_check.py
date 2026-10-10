@@ -42,7 +42,7 @@ with sync_playwright() as p:
     # B: sign out and IMMEDIATELY register a new person in the same tab (the reported flow)
     signout(page)
     email = f"newuser{sfx}@isolation.org"
-    register_ui(page, "Aditya Pande", email, f"aditya_{sfx}", "password123", spa=True)
+    register_ui(page, "Aditya Pande", email, f"aditya_{sfx}", "Secure#2026", spa=True)
     check("new account sees 0 projects (not the previous user's)", cards(page) == 0)
     txt = page.locator("main").inner_text()
     check("empty state explains how to get access and shows the user's email", "ask a project admin" in txt.lower() and email in txt)
@@ -69,7 +69,7 @@ with sync_playwright() as p:
     t1_before = cards(t1)
     t2.goto(WEB + "/login"); t2.wait_for_load_state("networkidle")
     check("a second tab does NOT start logged in as tab 1's account", "/login" in t2.url)
-    register_ui(t2, "Second Person", f"second{sfx}@isolation.org", f"second_{sfx}", "password123", spa=False)
+    register_ui(t2, "Second Person", f"second{sfx}@isolation.org", f"second_{sfx}", "Secure#2026", spa=False)
     time.sleep(2.5)                                    # give any (removed) cross-tab sync time to misbehave
     check("tab 1 is STILL the demo user", "Demo Presenter" in t1.locator("header").inner_text())
     check("tab 2 is the second person", "Second Person" in t2.locator("header").inner_text())

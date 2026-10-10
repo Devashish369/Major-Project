@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import ProjectMember, User
-from app.security import decode_access_token
+from app.security import decode_claims
 from app.services.realtime import manager
 
 router = APIRouter(tags=["realtime"])
@@ -29,8 +29,12 @@ WS_TRY_AGAIN_LATER = 1013    # refused: room is full
 
 
 def _is_member(db: Session, token: str, project_id: int) -> bool:
-    user_id = decode_access_token(token) if token else None
-    if user_id is None or db.get(User, user_id) is None:
+    claims = decode_claims(token) if token else None
+    if claims is None:
+        return False
+    user_id, token_version = claims
+    user = db.get(User, user_id)
+    if user is None or user.token_version != token_version:   # revoked token
         return False
     return db.execute(
         select(ProjectMember.id).where(

@@ -26,7 +26,7 @@ cd ../frontend && npm run build && npm run lint
 
 ## 3. Automated tests – counts and results
 
-`pytest --collect-only`: **267 tests in 16 files.**
+`pytest --collect-only`: **304 tests in 19 files.**
 
 | File | Tests | Covers (module) |
 |---|---:|---|
@@ -44,15 +44,18 @@ cd ../frontend && npm run build && npm run lint
 | test_seed_data.py | 5 | M10 demo-data definitions; DEMO_PASSWORD env var; live-LLM script cannot be collected |
 | test_error_envelope.py | 5 | §7 error envelope for 401 / 404 / 422 / 500 (no internals leaked) |
 | test_config_urls.py | 4 | Neon-style DATABASE_URL normalisation (sslmode, channel_binding, both prefixes) |
-| test_sprints.py | 3 |
-| test_performance.py | 5 | query-count guards (no N+1 on the dashboard and task list), gzip, one membership query per request | Sprint list with counts, permissions, no write endpoint |
+| test_security.py | 19 | brute-force lock-out (per email+IP, per email across IPs), same answer for unknown emails, sign-in audit trail is private, password change / sign-out-everywhere revoke old tokens (REST + WebSocket), forged tokens (wrong key, alg none, no exp, expired), weak / over-long passwords give 422 not 500, security headers, 1 MB body limit, CORS, AI and sign-up rate limits |
+| test_skill_gaps.py | 11 | skill synonyms, relatedness (RAG vs Generative AI), who-should-learn (closest skill + lowest workload), skill-gaps endpoint, recommendation rows with numbers / alternatives / missing skills, admin override recorded, typed apply body |
+| test_numbering.py | 7 | per-project #1 for tasks and D1 for decisions, numbers never reused, AI-plan tasks continue numbering, report and Ask use numbers, start-up migration of an old database |
+| test_performance.py | 5 | query-count guards (no N+1 on the dashboard and task list), gzip, one membership query per request |
+| test_sprints.py | 3 | Sprint list with counts, permissions, no write endpoint |
 
 | Database | Result |
 |---|---|
-| SQLite (in memory) | **267 passed**, 0 failed, 0 skipped |
-| PostgreSQL 18.4 | **267 passed**, 0 failed, 0 skipped |
+| SQLite (in memory) | **304 passed**, 0 failed, 0 skipped |
+| PostgreSQL 18.4 | **304 passed**, 0 failed, 0 skipped |
 
-Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 267; also register, account-switch and owner-adds-member journeys: 8/8, 9/9, 6/6).
+Browser regression scripts (real pointer drags, live board lifecycle, scan of every tab): `scripts/ui_checks/` – 5/5, 13/13 and 0 problems on 2026-10-09 (not part of the 304; on 2026-10-11 also `features_check.py` 18/18 (numbering, admin override, skills to learn, Security page, password rules) and `csp_check.py` PASS (the production build served with render.yaml's security headers: every screen, live updates and fonts with no CSP violation); also register, account-switch and owner-adds-member journeys: 8/8, 9/9, 6/6).
 
 Frontend: `npm run build` succeeds; `npm run lint` **0 warnings, 0 errors** (was 16 warnings before the clean-up). The frontend has no unit-test runner; its behaviour was checked by the browser walk-through (section 8) and the manual UAT table.
 
@@ -115,6 +118,16 @@ Run in-process against the real local database; the LLM is either the real Groq 
 | Password storage | all stored hashes are bcrypt (`$2b$`); no plaintext |
 | Tokens | JWT with `exp`, 12 h lifetime |
 | Endpoint sweep as demo user (33 calls, all API groups) | all 2xx with the standard envelope, no tracebacks |
+
+### Dependency and secret scans (2026-10-11)
+
+| Scan | Result |
+|---|---|
+| `pip-audit` on the backend's installed packages | No known vulnerabilities |
+| `npm audit` on the frontend | 0 vulnerabilities |
+| All commits searched for API keys (Groq, Google, OpenAI patterns) and database passwords | None found; only `.env.example` files are tracked |
+
+Full description of the security controls: `docs/SECURITY.md`.
 
 ## 8. Defects found in the final review and how each was fixed
 

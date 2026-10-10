@@ -147,11 +147,11 @@ export default function ReportTab({ projectId }) {
         <div className="grid sm:grid-cols-2 gap-x-8">
           <Section title="Most overdue tasks">
             <Table head={['Task', 'Due', 'Late', 'Assignee']} empty="No overdue tasks."
-              rows={r.overdue_tasks.map((t) => [`#${t.id} ${t.title}`, t.due_date, `${t.days_overdue} d`, t.assignee ?? '—'])} />
+              rows={r.overdue_tasks.map((t) => [`#${t.number ?? t.id} ${t.title}`, t.due_date, `${t.days_overdue} d`, t.assignee ?? '—'])} />
           </Section>
           <Section title="Blocked tasks">
             <Table head={['Task', 'Waiting for']} empty="No blocked tasks."
-              rows={r.blocked_tasks.map((t) => [`#${t.id} ${t.title}`, t.blockers.map((b) => `#${b.id} ${b.title} (${b.status.replace('_', ' ')})`).join(', ')])} />
+              rows={r.blocked_tasks.map((t) => [`#${t.number ?? t.id} ${t.title}`, t.blockers.map((b) => `#${b.number ?? b.id} ${b.title} (${b.status.replace('_', ' ')})`).join(', ')])} />
           </Section>
         </div>
 
@@ -162,7 +162,7 @@ export default function ReportTab({ projectId }) {
 
         <Section title="Recent activity">
           <Table head={['When', 'Who', 'What']} empty="No activity yet."
-            rows={r.activity.map((a) => [new Date(a.created_at).toLocaleDateString(), a.user ?? '—', `${a.action.replace(/_/g, ' ')}${a.task_id ? ` (task #${a.task_id})` : ''}`])} />
+            rows={r.activity.map((a) => [new Date(a.created_at).toLocaleDateString(), a.user ?? '—', `${a.action.replace(/_/g, ' ')}${a.task_id ? ` (task #${a.task_number ?? a.task_id})` : ''}`])} />
         </Section>
 
         <footer className="report-section mt-8 border-t border-slate-300 pt-3 text-xs text-slate-500 space-y-1">

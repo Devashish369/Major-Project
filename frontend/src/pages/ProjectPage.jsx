@@ -12,12 +12,12 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowLeft, BarChart2, Users, Loader2, UserPlus, Trash2,
   Shield, User, AlertCircle, LayoutDashboard,
-  Sparkles, CheckCircle2,
+  Sparkles, CheckCircle2, GraduationCap,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { getProject, listMembers, addMember, updateMember, removeMember, deleteProject } from '../api/projects';
 import { listTasks } from '../api/tasks';
-import { recommendAssignments, applyAssignments, getWorkload } from '../api/assignments';
+import { recommendAssignments, applyAssignments, getWorkload, getSkillGaps } from '../api/assignments';
 import AddMemberModal from '../components/AddMemberModal';
 import KanbanBoard from '../components/KanbanBoard';
 // Heavy tabs are downloaded only when opened (charts, graph library, report) so the first
@@ -89,10 +89,14 @@ function WorkloadBar({ utilization, label }) {
 
 // ── Recommendation panel ──────────────────────────────────────────────────────
 
+const pct = (x) => `${Math.round((x ?? 0) * 100)}%`;
+const SKIP = 'skip';
+
 function RecommendPanel({ projectId, members, isAdmin }) {
   const qc = useQueryClient();
-  const [draft, setDraft] = useState(null);      // [{task_id, user_id, ...}]
-  const [applied, setApplied] = useState(false);
+  const [draft, setDraft] = useState(null);      // rows from /assignments/recommend
+  const [choice, setChoice] = useState({});      // task_id -> user_id chosen by the admin, or SKIP
+  const [applied, setApplied] = useState(null);  // {applied, overridden} after Apply
   const [showPanel, setShowPanel] = useState(false);
   const [applyErr, setApplyErr] = useState('');
 
@@ -103,18 +107,26 @@ function RecommendPanel({ projectId, members, isAdmin }) {
     mutationFn: () => recommendAssignments(projectId),
     onSuccess: (data) => {
       setDraft(data);
-      setApplied(false);
+      setChoice(Object.fromEntries(data.map((r) => [r.task_id, r.user_id])));
+      setApplied(null);
       setApplyErr('');
       setShowPanel(true);
+      qc.invalidateQueries({ queryKey: ['skill-gaps', projectId] });
     },
   });
 
+  const chosenRows = (draft || [])
+    .filter((r) => choice[r.task_id] !== SKIP)
+    .map((r) => ({ task_id: r.task_id, user_id: Number(choice[r.task_id]), recommended_user_id: r.user_id }));
+  const changedCount = (draft || []).filter((r) => choice[r.task_id] !== SKIP && Number(choice[r.task_id]) !== r.user_id).length;
+
   const applyMut = useMutation({
-    mutationFn: () => applyAssignments(projectId, draft.map((r) => ({ task_id: r.task_id, user_id: r.user_id }))),
-    onSuccess: () => {
+    mutationFn: () => applyAssignments(projectId, chosenRows),
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['tasks', projectId] });
       qc.invalidateQueries({ queryKey: ['workload', projectId] });
-      setApplied(true);
+      qc.invalidateQueries({ queryKey: ['skill-gaps', projectId] });
+      setApplied(data);
       setApplyErr('');
     },
     onError: (e) => setApplyErr(errorMessage(e, 'Failed to apply.')),
@@ -123,14 +135,16 @@ function RecommendPanel({ projectId, members, isAdmin }) {
   return (
     <div className="mt-6 rounded-2xl border border-slate-700 bg-slate-800 overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-4">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
             <Sparkles className="h-4 w-4 text-indigo-400" />
           </div>
           <div>
             <p className="text-sm font-semibold text-white">AI Assignment Recommendations</p>
-            <p className="text-xs text-slate-400">Optimised by skill match, availability & on-time rate</p>
+            <p className="text-xs text-slate-400">
+              Optimised by skill match, availability & on-time rate{isAdmin ? ' – you can change any suggestion before applying' : ''}
+            </p>
           </div>
         </div>
         <button
@@ -146,6 +160,9 @@ function RecommendPanel({ projectId, members, isAdmin }) {
           Recommend assignments
         </button>
       </div>
+      {recommendMut.isError && (
+        <p className="px-5 pb-3 text-sm text-red-400">{errorMessage(recommendMut.error, 'Could not compute recommendations.')}</p>
+      )}
 
       {/* Results table */}
       {showPanel && draft !== null && (
@@ -158,8 +175,8 @@ function RecommendPanel({ projectId, members, isAdmin }) {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-slate-700 text-xs text-slate-400">
-                      <th className="px-4 py-2.5 text-left">Task ID</th>
-                      <th className="px-4 py-2.5 text-left">Suggested Assignee</th>
+                      <th className="px-4 py-2.5 text-left">Task</th>
+                      <th className="px-4 py-2.5 text-left">{isAdmin ? 'Assignee (AI suggestion – change if needed)' : 'Suggested assignee'}</th>
                       <th className="px-4 py-2.5 text-right">Skill</th>
                       <th className="px-4 py-2.5 text-right">Avail</th>
                       <th className="px-4 py-2.5 text-right">Perf</th>
@@ -168,19 +185,64 @@ function RecommendPanel({ projectId, members, isAdmin }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-700/50">
-                    {draft.map((row) => (
-                      <tr key={row.task_id} className="hover:bg-slate-700/30 transition">
-                        <td className="px-4 py-2.5 text-slate-300 font-mono text-xs">#{row.task_id}</td>
-                        <td className="px-4 py-2.5 text-white font-medium">{nameMap[row.user_id] || row.user_id}</td>
-                        <td className="px-4 py-2.5 text-right text-slate-300">{(row.skill_match * 100).toFixed(0)}%</td>
-                        <td className="px-4 py-2.5 text-right text-slate-300">{(row.availability * 100).toFixed(0)}%</td>
-                        <td className="px-4 py-2.5 text-right text-slate-300">{(row.performance * 100).toFixed(0)}%</td>
-                        <td className="px-4 py-2.5 text-right">
-                          <span className="font-semibold text-indigo-300">{row.score.toFixed(2)}</span>
-                        </td>
-                        <td className="px-4 py-2.5 text-slate-400 text-xs max-w-xs">{row.reason}</td>
-                      </tr>
-                    ))}
+                    {draft.map((row) => {
+                      const picked = choice[row.task_id];
+                      const skipped = picked === SKIP;
+                      const changed = !skipped && Number(picked) !== row.user_id;
+                      // scores of whoever is chosen now (the AI's pick unless the admin changed it)
+                      const shown = changed
+                        ? (row.alternatives || []).find((a) => a.user_id === Number(picked)) || row
+                        : row;
+                      return (
+                        <tr key={row.task_id} data-task-row={row.task_id} className={`transition ${skipped ? 'opacity-50' : 'hover:bg-slate-700/30'}`}>
+                          <td className="px-4 py-2.5 text-slate-300 text-xs">
+                            <span className="font-mono">#{row.task_number ?? row.task_id}</span>
+                            {row.task_title && <span className="block text-slate-400 max-w-[14rem] truncate" title={row.task_title}>{row.task_title}</span>}
+                          </td>
+                          <td className="px-4 py-2.5">
+                            {isAdmin && !applied ? (
+                              <select
+                                aria-label={`Assignee for task #${row.task_number ?? row.task_id}`}
+                                data-assignee-select={row.task_id}
+                                value={String(picked)}
+                                onChange={(e) => setChoice((c) => ({ ...c, [row.task_id]: e.target.value === SKIP ? SKIP : Number(e.target.value) }))}
+                                className="w-full min-w-[11rem] rounded-lg border border-slate-600 bg-slate-900 px-2 py-1.5 text-sm text-white outline-none focus:border-indigo-500"
+                              >
+                                {(row.alternatives?.length ? row.alternatives : [row]).map((a) => (
+                                  <option key={a.user_id} value={a.user_id}>
+                                    {nameMap[a.user_id] || `User ${a.user_id}`} – {a.score.toFixed(2)}{a.user_id === row.user_id ? ' (AI pick)' : ''}
+                                  </option>
+                                ))}
+                                <option value={SKIP}>Leave unassigned</option>
+                              </select>
+                            ) : (
+                              <span className="text-white font-medium">{nameMap[Number(picked)] || nameMap[row.user_id] || row.user_id}</span>
+                            )}
+                            {changed && (
+                              <span className="mt-1 block text-[11px] text-amber-300">
+                                Changed by admin · AI suggested {nameMap[row.user_id] || row.user_id}
+                              </span>
+                            )}
+                          </td>
+                          <td className="px-4 py-2.5 text-right text-slate-300">{pct(shown.skill_match)}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-300">{pct(shown.availability)}</td>
+                          <td className="px-4 py-2.5 text-right text-slate-300">{pct(shown.performance)}</td>
+                          <td className="px-4 py-2.5 text-right">
+                            <span className={`font-semibold ${changed ? 'text-amber-300' : 'text-indigo-300'}`}>{shown.score.toFixed(2)}</span>
+                          </td>
+                          <td className="px-4 py-2.5 text-slate-400 text-xs max-w-xs">
+                            {skipped ? 'Will stay unassigned.' : changed
+                              ? `Admin's choice (score ${shown.score.toFixed(2)} vs the AI pick's ${row.score.toFixed(2)}).`
+                              : row.reason}
+                            {row.missing_skills?.length > 0 && (
+                              <span className="mt-1 block text-amber-300/90">
+                                Nobody on the team has: {row.missing_skills.join(', ')} – see “Skills to learn” below.
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -191,22 +253,27 @@ function RecommendPanel({ projectId, members, isAdmin }) {
                 </div>
               )}
 
-              <div className="flex items-center justify-between px-4 py-3 border-t border-slate-700">
-                <p className="text-xs text-slate-400">{draft.length} recommendation(s)</p>
+              <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t border-slate-700">
+                <p className="text-xs text-slate-400">
+                  {draft.length} recommendation(s){changedCount > 0 ? ` · ${changedCount} changed by you` : ''}
+                  {chosenRows.length < draft.length ? ` · ${draft.length - chosenRows.length} left unassigned` : ''}
+                </p>
                 {isAdmin && !applied && (
                   <button
                     id="apply-assignments-btn"
                     onClick={() => applyMut.mutate()}
-                    disabled={applyMut.isPending}
+                    disabled={applyMut.isPending || chosenRows.length === 0}
                     className="flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-60 transition"
                   >
                     {applyMut.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
-                    Apply assignments
+                    Apply {chosenRows.length} assignment{chosenRows.length === 1 ? '' : 's'}
                   </button>
                 )}
+                {!isAdmin && <p className="text-xs text-slate-500">Only a project admin can apply or change assignments.</p>}
                 {applied && (
                   <span className="flex items-center gap-2 text-sm text-green-400 font-medium">
-                    <CheckCircle2 className="h-4 w-4" /> Applied! Check the Board.
+                    <CheckCircle2 className="h-4 w-4" /> Applied {applied.applied}
+                    {applied.overridden ? ` (${applied.overridden} changed by you)` : ''}. Check the Board.
                   </span>
                 )}
               </div>
@@ -214,6 +281,79 @@ function RecommendPanel({ projectId, members, isAdmin }) {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Skills to learn (skill gaps) ──────────────────────────────────────────────
+
+function SkillGapsPanel({ projectId }) {
+  const { data: gaps = [], isLoading, isError, error, refetch } = useQuery({
+    queryKey: ['skill-gaps', projectId],
+    queryFn: () => getSkillGaps(projectId),
+  });
+
+  return (
+    <div id="skill-gaps" className="mt-6 rounded-2xl border border-slate-700 bg-slate-800 overflow-hidden">
+      <div className="flex items-center gap-3 px-5 py-4">
+        <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+          <GraduationCap className="h-4 w-4 text-amber-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-white">Skills to learn</p>
+          <p className="text-xs text-slate-400">
+            Skills the open tasks need that nobody on the team has – and who should learn each one
+          </p>
+        </div>
+      </div>
+      <div className="border-t border-slate-700 px-5 py-4">
+        {isLoading ? (
+          <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+        ) : isError ? (
+          <p className="text-sm text-red-400">
+            {errorMessage(error, 'Could not load skill gaps.')}{' '}
+            <button className="underline" onClick={() => refetch()}>Retry</button>
+          </p>
+        ) : gaps.length === 0 ? (
+          <p className="text-sm text-slate-400">
+            <CheckCircle2 className="inline h-4 w-4 text-green-400 mr-1" />
+            Every skill the open tasks need is covered by someone on the team.
+          </p>
+        ) : (
+          <ul className="space-y-3">
+            {gaps.map((g) => (
+              <li key={g.canonical} data-gap={g.canonical} className="rounded-xl border border-slate-700 bg-slate-900/60 p-4">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="rounded-full bg-amber-500/15 border border-amber-500/30 px-2.5 py-0.5 text-xs font-semibold text-amber-300">
+                    {g.skill}
+                  </span>
+                  <span className="text-xs text-slate-400">
+                    needed by {g.tasks.map((t) => `#${t.number}`).join(', ')}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm text-slate-200">{g.advice}</p>
+                <div className="mt-3 grid gap-2 sm:grid-cols-2 text-xs">
+                  <div className="rounded-lg border border-slate-700 px-3 py-2">
+                    <p className="text-slate-500">Closest existing skill</p>
+                    {g.closest ? (
+                      <p className="text-slate-200">
+                        <strong className="text-white">{g.closest.full_name}</strong> – knows {g.closest.via_skill} (L{g.closest.via_level}),
+                        {' '}{pct(g.closest.relatedness)} related
+                      </p>
+                    ) : <p className="text-slate-400">Nobody has a related skill</p>}
+                  </div>
+                  <div className="rounded-lg border border-slate-700 px-3 py-2">
+                    <p className="text-slate-500">Lowest workload</p>
+                    <p className="text-slate-200">
+                      <strong className="text-white">{g.least_loaded.full_name}</strong> – {pct(g.least_loaded.utilization)} busy
+                    </p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }
@@ -366,6 +506,7 @@ function TeamTab({ projectId, isAdmin, currentUserId }) {
 
       {/* Recommendation panel (M5) */}
       <RecommendPanel projectId={projectId} members={members} isAdmin={isAdmin} />
+      <SkillGapsPanel projectId={projectId} />
 
       {showAdd && (
         <AddMemberModal

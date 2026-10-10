@@ -20,7 +20,7 @@ def client():
 
 def register(client, name):
     r = client.post(f"{API}/auth/register", json={
-        "email": f"{name}@t.com", "username": name, "full_name": name.title(), "password": "password123"})
+        "email": f"{name}@t.com", "username": name, "full_name": name.title(), "password": "Secure#2026"})
     return r.json()["data"]["access_token"]
 
 

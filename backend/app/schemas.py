@@ -14,7 +14,7 @@ M3: Task, TaskDependency, ActivityLog schemas.
 from datetime import datetime
 from typing import Literal, Optional
 
-from pydantic import BaseModel, EmailStr, Field, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator, model_validator
 
 
 # ── Auth / Token ──────────────────────────────────────────────────────────────
@@ -25,6 +25,28 @@ class TokenOut(BaseModel):
     token_type: str = "bearer"
 
 
+# ── Password policy (cryptography & security protocols) ──────────────────────
+# bcrypt only uses the first 72 BYTES of a password (bcrypt 5 refuses longer ones), so longer
+# passwords are rejected with a clear message instead of a server error.
+COMMON_PASSWORDS = {
+    "password", "password1", "password123", "passw0rd", "12345678", "123456789", "1234567890",
+    "qwerty123", "qwertyuiop", "iloveyou1", "admin123", "welcome1", "welcome123", "letmein1",
+    "abc12345", "abcd1234", "11111111", "00000000", "asdf1234", "india123", "test1234",
+}
+
+
+def check_password_strength(v: str) -> str:
+    if len(v) < 8:
+        raise ValueError("Password must be at least 8 characters.")
+    if len(v.encode("utf-8")) > 72:
+        raise ValueError("Password must be at most 72 bytes (about 72 characters).")
+    if not any(c.isalpha() for c in v) or not any(c.isdigit() for c in v):
+        raise ValueError("Password must contain at least one letter and one number.")
+    if v.lower() in COMMON_PASSWORDS:
+        raise ValueError("This password is too common. Please choose another one.")
+    return v
+
+
 # ── User ──────────────────────────────────────────────────────────────────────
 
 class UserCreate(BaseModel):
@@ -32,7 +54,22 @@ class UserCreate(BaseModel):
     email: EmailStr
     username: str = Field(..., min_length=3, max_length=50)
     full_name: str = Field(..., min_length=1, max_length=100)
-    password: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=8, max_length=128)
+
+    @field_validator("password")
+    @classmethod
+    def strong_password(cls, v: str) -> str:
+        return check_password_strength(v)
+
+    @model_validator(mode="after")
+    def password_not_personal(self):
+        p = self.password.lower()
+        if len(self.username) >= 4 and self.username.lower() in p:
+            raise ValueError("Password must not contain your username.")
+        local = str(self.email).split("@")[0].lower()
+        if len(local) >= 4 and local in p:
+            raise ValueError("Password must not contain your email address.")
+        return self
 
     @field_validator("username")
     @classmethod
@@ -46,7 +83,28 @@ class UserCreate(BaseModel):
 class UserLogin(BaseModel):
     """Body for POST /auth/login."""
     email: EmailStr
-    password: str
+    password: str = Field(..., max_length=128)
+
+
+class ChangePasswordRequest(BaseModel):
+    """Body for POST /auth/change-password."""
+    current_password: str = Field(..., max_length=128)
+    new_password: str = Field(..., max_length=128)
+
+    @field_validator("new_password")
+    @classmethod
+    def strong_password(cls, v: str) -> str:
+        return check_password_strength(v)
+
+
+class SecurityEventOut(BaseModel):
+    id: int
+    created_at: datetime
+    event: str
+    ip: Optional[str]
+    user_agent: Optional[str]
+
+    model_config = {"from_attributes": True}
 
 
 class UserUpdate(BaseModel):
@@ -60,7 +118,11 @@ class UserUpdate(BaseModel):
         """Each skill level must be an integer 1–5."""
         if v is None:
             return v
+        if len(v) > 50:
+            raise ValueError("At most 50 skills.")
         for skill, level in v.items():
+            if isinstance(skill, str) and len(skill.strip()) > 40:
+                raise ValueError("Skill names must be at most 40 characters.")
             if not isinstance(level, int) or not (1 <= level <= 5):
                 raise ValueError(
                     f"Skill level for '{skill}' must be an integer 1–5, got {level!r}."
@@ -181,7 +243,12 @@ class TaskCreate(BaseModel):
     estimate_hours: Optional[float] = Field(None, ge=0)
     assignee_id: Optional[int] = None
     due_date: Optional[str] = None       # ISO date string
-    required_skills: Optional[list] = None
+    required_skills: Optional[list[str]] = Field(None, max_length=20)
+
+    @field_validator("required_skills")
+    @classmethod
+    def short_skill_names(cls, v):
+        return _check_required_skills(v)
     module: Optional[str] = None
     sprint_id: Optional[int] = None
 
@@ -196,14 +263,26 @@ class TaskUpdate(BaseModel):
     actual_hours: Optional[float] = Field(None, ge=0)
     assignee_id: Optional[int] = None
     due_date: Optional[str] = None
-    required_skills: Optional[list] = None
+    required_skills: Optional[list[str]] = Field(None, max_length=20)
+
+    @field_validator("required_skills")
+    @classmethod
+    def short_skill_names(cls, v):
+        return _check_required_skills(v)
     module: Optional[str] = None
     sprint_id: Optional[int] = None
+
+
+def _check_required_skills(v):
+    if v is not None and any(len(str(x)) > 40 for x in v):
+        raise ValueError("Skill names must be at most 40 characters.")
+    return v
 
 
 class TaskOut(BaseModel):
     """Task row returned to clients."""
     id: int
+    number: Optional[int] = None    # per-project number shown as #1, #2 … (id is the internal key)
     project_id: int
     sprint_id: Optional[int]
     title: str
@@ -278,9 +357,16 @@ class AssignmentRecommendRequest(BaseModel):
     force: bool = False   # if True, also re-optimise already-assigned tasks
 
 
+class AssignmentItem(BaseModel):
+    task_id: int
+    user_id: int
+    # who the AI suggested; when it differs from user_id the admin overrode it (kept in the activity log)
+    recommended_user_id: Optional[int] = None
+
+
 class AssignmentApplyRequest(BaseModel):
     """Body for POST /projects/{id}/assignments/apply (admin only)."""
-    assignments: list[dict]   # [{task_id: int, user_id: int}, ...]
+    assignments: list[AssignmentItem] = Field(..., max_length=500)
 
 
 # ── Estimator (M6) ────────────────────────────────────────────────────────────
@@ -304,6 +390,7 @@ class DecisionCreate(BaseModel):
 class DecisionOut(BaseModel):
     """Decision log entry returned to clients."""
     id: int
+    number: Optional[int] = None    # per-project number shown as D1, D2 …
     project_id: int
     title: str
     decision: str

@@ -24,7 +24,7 @@ with sync_playwright() as p:
     errors = []; page.on("pageerror", lambda e: errors.append(str(e)[:120]))
 
     # 1. the exact input from the report: username contains '@'
-    fill(page, "Aditya Pande", f"aditya{sfx}@123.com", "aditya@", "password123")
+    fill(page, "Aditya Pande", f"aditya{sfx}@123.com", "aditya@", "Secure#2026")
     page.get_by_role("button", name="Create account").click(); time.sleep(1.5)
     t = visible_text(page)
     check("bad username: page is NOT blank", len(t) > 20)
@@ -32,21 +32,21 @@ with sync_playwright() as p:
     check("bad username: no raw object / JS crash", not errors)
 
     # 2. other invalid inputs give readable messages too
-    fill(page, "A B", "not-an-email", "okname", "password123"); page.get_by_role("button", name="Create account").click(); time.sleep(1.2)
+    fill(page, "A B", "not-an-email", "okname", "Secure#2026"); page.get_by_role("button", name="Create account").click(); time.sleep(1.2)
     check("bad email: readable message, page alive", "email" in visible_text(page).lower() and len(visible_text(page)) > 20)
     fill(page, "A B", f"ok{sfx}@123.com", "okname", "short"); page.get_by_role("button", name="Create account").click(); time.sleep(1.2)
     check("short password: readable message, page alive", ("8" in visible_text(page) or "password" in visible_text(page).lower()) and len(visible_text(page)) > 20)
 
     # 3. valid registration -> dashboard, and the user really exists in the database
     user = f"aditya_{sfx}"
-    fill(page, "Aditya Pande", f"aditya{sfx}@123.com", user, "password123")
+    fill(page, "Aditya Pande", f"aditya{sfx}@123.com", user, "Secure#2026")
     page.get_by_role("button", name="Create account").click(); page.wait_for_url("**/dashboard", timeout=15000); time.sleep(1)
     check("valid registration lands on the dashboard", "/dashboard" in page.url)
-    r = httpx.post(f"{API}/auth/login", json={"email": f"aditya{sfx}@123.com", "password": "password123"})
+    r = httpx.post(f"{API}/auth/login", json={"email": f"aditya{sfx}@123.com", "password": "Secure#2026"})
     check("the account was stored (login works)", r.status_code == 200)
 
     # 4. duplicate email -> readable message
-    fill(page, "Aditya Pande", f"aditya{sfx}@123.com", f"other_{sfx}", "password123"); page.get_by_role("button", name="Create account").click(); time.sleep(1.2)
+    fill(page, "Aditya Pande", f"aditya{sfx}@123.com", f"other_{sfx}", "Secure#2026"); page.get_by_role("button", name="Create account").click(); time.sleep(1.2)
     check("duplicate email: readable message", ("already" in visible_text(page).lower() or "registered" in visible_text(page).lower()) and len(visible_text(page)) > 20)
     b.close()
 

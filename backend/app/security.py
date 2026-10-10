@@ -36,7 +36,15 @@ def verify_password(plain: str, hashed: str) -> bool:
 
     bcrypt.checkpw is constant-time to prevent timing attacks.
     """
-    return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    try:
+        return bcrypt.checkpw(plain.encode("utf-8"), hashed.encode("utf-8"))
+    except ValueError:      # bcrypt refuses passwords over 72 bytes: such a password never matches
+        return False
+
+
+# A real bcrypt hash used when the email is unknown, so a login for a non-existent account takes
+# as long as one with a wrong password (stops guessing which emails exist by timing).
+DUMMY_HASH = bcrypt.hashpw(b"timing-equaliser", bcrypt.gensalt()).decode("utf-8")
 
 
 # ── JWT ───────────────────────────────────────────────────────────────────────
@@ -44,7 +52,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 ALGORITHM = "HS256"   # HMAC-SHA256; symmetric, good for single-server use
 
 
-def create_access_token(user_id: int) -> str:
+def create_access_token(user_id: int, token_version: int = 0) -> str:
     """
     Create a signed JWT containing the user's id as the 'sub' claim.
 
@@ -58,8 +66,19 @@ def create_access_token(user_id: int) -> str:
         "sub": str(user_id),   # subject = user id
         "exp": expire,         # expiry claim; PyJWT enforces this automatically
         "iat": datetime.now(timezone.utc),  # issued-at (useful for debugging)
+        "tv": token_version,   # must equal users.token_version, else the token was revoked
     }
     return jwt.encode(payload, settings.SECRET_KEY, algorithm=ALGORITHM)
+
+
+def decode_claims(token: str) -> Optional[tuple[int, int]]:
+    """(user_id, token_version) of a valid, unexpired token, else None. Only HS256 is accepted."""
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[ALGORITHM],
+                             options={"require": ["exp", "sub"]})
+        return int(payload["sub"]), int(payload.get("tv", 0))
+    except (jwt.PyJWTError, ValueError, TypeError, KeyError):
+        return None
 
 
 def decode_access_token(token: str) -> Optional[int]:

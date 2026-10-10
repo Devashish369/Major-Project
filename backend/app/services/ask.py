@@ -45,7 +45,6 @@ SYSTEM_PROMPT = (
 )
 
 _TAG = re.compile(r"\b([TDA])(\d+)\b")
-_TYPE = {"T": "task", "D": "decision", "A": "activity"}
 
 
 class AskUnavailable(Exception):
@@ -54,8 +53,11 @@ class AskUnavailable(Exception):
 
 # ── 1. Context ────────────────────────────────────────────────────────────────
 
-def build_context(db: Session, project_id: int) -> tuple[str, set[str]]:
-    """Return (context_text, set of valid tags like {"T12", "D3"})."""
+def build_context(db: Session, project_id: int) -> tuple[str, dict[str, dict]]:
+    """
+    Return (context_text, {tag: source}) where tags use the numbers people see:
+    T3 = task #3 of THIS project, D2 = decision D2, A123 = activity row 123.
+    """
     tasks = db.execute(select(Task).where(Task.project_id == project_id).order_by(Task.id)).scalars().all()
     deps: dict[int, list[int]] = {}
     for d in db.execute(
@@ -72,27 +74,36 @@ def build_context(db: Session, project_id: int) -> tuple[str, set[str]]:
     # only the people this project's tasks / decisions / activity refer to
     users = names_for(db, [t.assignee_id for t in tasks] + [d.made_by for d in decisions] + [a.user_id for a in activity])
 
+    tnum = {t.id: t.number or t.id for t in tasks}
+    dnum = {d.id: d.number or d.id for d in decisions}
+    source_of = {f"T{tnum[t.id]}": {"type": "task", "id": t.id, "number": tnum[t.id]} for t in tasks}
+    source_of.update({f"D{dnum[d.id]}": {"type": "decision", "id": d.id, "number": dnum[d.id]} for d in decisions})
+    source_of.update({f"A{a.id}": {"type": "activity", "id": a.id, "number": a.id} for a in activity})
+
+    def tref(task_id):
+        return f"T{tnum[task_id]}" if task_id in tnum else "a deleted task"
+
     sections: list[tuple[str, list[tuple[str, str]]]] = [
-        ("DECISIONS", [(f"D{d.id}",
-                        f"[D{d.id}] {d.title}: {d.decision}"
+        ("DECISIONS", [(f"D{dnum[d.id]}",
+                        f"[D{dnum[d.id]}] {d.title}: {d.decision}"
                         + (f" Reason: {d.reason}" if d.reason else "")
                         + f" (by {users.get(d.made_by, 'unknown')}, {d.created_at:%Y-%m-%d}"
-                        + (f", about task T{d.related_task_id}" if d.related_task_id else "") + ")")
+                        + (f", about task {tref(d.related_task_id)}" if d.related_task_id else "") + ")")
                        for d in decisions]),
-        ("TASKS", [(f"T{t.id}",
-                    f"[T{t.id}] {t.title} | {t.status} | est {t.estimate_hours}h"
+        ("TASKS", [(f"T{tnum[t.id]}",
+                    f"[T{tnum[t.id]}] {t.title} | {t.status} | est {t.estimate_hours}h"
                     + (f" actual {t.actual_hours}h" if t.actual_hours else "")
                     + f" | assignee {users.get(t.assignee_id, 'unassigned')} | due {t.due_date or 'none'}"
-                    + (" | depends on " + ", ".join(f"T{x}" for x in deps[t.id]) if t.id in deps else ""))
+                    + (" | depends on " + ", ".join(tref(x) for x in deps[t.id]) if t.id in deps else ""))
                    for t in tasks]),
         ("RECENT ACTIVITY (newest first)", [(f"A{a.id}",
                     f"[A{a.id}] {a.created_at:%Y-%m-%d} {users.get(a.user_id, 'someone')}: {a.action}"
-                    + (f" task T{a.task_id}" if a.task_id else "") + f" {json.dumps(a.meta or {})}")
+                    + (f" task {tref(a.task_id)}" if a.task_id else "") + f" {json.dumps(a.meta or {})}")
                    for a in activity]),
     ]
 
     out: list[str] = []
-    valid: set[str] = set()
+    valid: dict[str, dict] = {}
     used = 0
     for title, items in sections:
         out.append(f"## {title}")
@@ -103,7 +114,7 @@ def build_context(db: Session, project_id: int) -> tuple[str, set[str]]:
                 omitted += 1
                 continue
             out.append(line)
-            valid.add(tag)
+            valid[tag] = source_of[tag]
             used += len(line) + 1
         if omitted:
             out.append(f"(+{omitted} more omitted to fit the size limit)")
@@ -160,5 +171,5 @@ def answer_question(db: Session, project_id: int, question: str) -> dict:
         [f"{m.group(1)}{m.group(2)}" for s in cited for m in [_TAG.fullmatch(s.strip().strip("[]"))] if m]
         + [f"{m.group(1)}{m.group(2)}" for m in _TAG.finditer(answer)]
     ))
-    sources = [{"type": _TYPE[t[0]], "id": int(t[1:])} for t in tags if t in valid]
+    sources = [valid[t] for t in tags if t in valid]
     return {"answer": answer, "sources": sources}

@@ -43,7 +43,7 @@ def client():
 def register_and_token(client, suffix="m8risk"):
     r = client.post("/api/v1/auth/register", json={
         "email": f"{suffix}@test.com", "username": suffix,
-        "full_name": "M8 Test", "password": "password123",
+        "full_name": "M8 Test", "password": "Secure#2026",
     })
     assert r.status_code == 201
     return r.json()["data"]["access_token"]

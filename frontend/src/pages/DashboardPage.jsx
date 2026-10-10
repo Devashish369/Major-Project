@@ -15,8 +15,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart2, Plus, LogOut, User, Calendar, Users,
-  CheckCircle, Clock, AlertCircle, Loader2, FolderOpen,
-} from 'lucide-react';
+  CheckCircle, Clock, AlertCircle, Loader2, FolderOpen, ShieldCheck } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { listProjects, createProject } from '../api/projects';
 import CreateProjectModal from '../components/CreateProjectModal';
@@ -165,6 +164,14 @@ export default function DashboardPage() {
           >
             <BarChart2 className="h-4 w-4" />
             Benchmarks
+          </button>
+          <button
+            id="security-link"
+            onClick={() => navigate('/security')}
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
+          >
+            <ShieldCheck className="h-4 w-4" />
+            Security
           </button>
           <button
             id="skills-editor-btn"

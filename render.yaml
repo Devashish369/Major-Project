@@ -1,5 +1,12 @@
 # Render Blueprint (New + -> Blueprint -> pick this repo).  No Docker needed.
 # Secrets are NOT stored here: values marked `sync: false` are typed into the Render dashboard.
+#
+# FREE TIER ONLY – nothing here costs money (see docs/FREE_TIER.md):
+#   plan: free web service (750 free hours/month, sleeps after 15 idle min) + free static site.
+#   No disks, no workers, no cron jobs, no paid instance types.
+#   buildFilter: a push that only changes docs/ or scripts/ does NOT rebuild anything, so the
+#   monthly free build minutes last.  Do not add a payment method: without one Render can only
+#   pause services when a free limit is reached, never bill.
 services:
   # ── Backend: FastAPI ──────────────────────────────────────────────────────
   - type: web
@@ -7,6 +14,11 @@ services:
     runtime: python
     rootDir: backend
     plan: free
+    buildFilter:                     # rebuild the API only when backend code changes
+      paths:
+        - backend/**
+      ignoredPaths:
+        - backend/tests/**
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/v1/health
@@ -41,6 +53,9 @@ services:
     name: intellipm-web
     runtime: static
     rootDir: frontend
+    buildFilter:                     # rebuild the site only when frontend code changes
+      paths:
+        - frontend/**
     buildCommand: npm install && npm run build
     staticPublishPath: dist
     envVars:
@@ -52,3 +67,24 @@ services:
       - type: rewrite                # React Router: every path serves index.html
         source: /*
         destination: /index.html
+    # Browser security headers for the website (network security).  connect-src must list the
+    # API address: if the API service ever gets a different URL, update the two entries below.
+    headers:
+      - path: /*
+        name: Content-Security-Policy
+        value: "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data:; connect-src 'self' https://intellipm-api.onrender.com wss://intellipm-api.onrender.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: strict-origin-when-cross-origin
+      - path: /*
+        name: Permissions-Policy
+        value: "camera=(), microphone=(), geolocation=(), payment=()"
+      - path: /assets/*              # file names contain a content hash: safe to cache for a year
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

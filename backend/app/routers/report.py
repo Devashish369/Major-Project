@@ -47,6 +47,7 @@ def project_report(
         select(ActivityLog).where(ActivityLog.project_id == project_id)
         .order_by(ActivityLog.created_at.desc(), ActivityLog.id.desc()).limit(10)
     ).scalars().all()
+    task_number = {t.id: t.number for t in tasks}
     # only the people this project's tasks / decisions / activity refer to
     users = names_for(db, [t.assignee_id for t in tasks] + [d.made_by for d in decisions] + [a.user_id for a in activity])
 
@@ -57,13 +58,14 @@ def project_report(
             "start_date": project.start_date, "due_date": project.due_date,
             "member_count": len(workload),
         },
-        tasks=[{"id": t.id, "title": t.title, "status": t.status, "estimate_hours": t.estimate_hours,
+        tasks=[{"id": t.id, "number": t.number, "title": t.title, "status": t.status, "estimate_hours": t.estimate_hours,
                 "due_date": t.due_date, "assignee_id": t.assignee_id} for t in tasks],
         dependencies=[{"task_id": d.task_id, "depends_on_id": d.depends_on_id} for d in deps],
         health=health, forecast=forecast, workload=workload,
-        decisions=[{"id": d.id, "title": d.title, "decision": d.decision, "reason": d.reason,
+        decisions=[{"id": d.id, "number": d.number, "title": d.title, "decision": d.decision, "reason": d.reason,
                     "made_by": users.get(d.made_by), "created_at": d.created_at.isoformat()} for d in decisions],
         activity=[{"id": a.id, "action": a.action, "user": users.get(a.user_id), "task_id": a.task_id,
+                   "task_number": task_number.get(a.task_id),
                    "meta": a.meta or {}, "created_at": a.created_at.isoformat()} for a in activity],
         user_names=users,
     )

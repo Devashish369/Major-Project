@@ -15,6 +15,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, get_membership
+from app.ratelimit import limit
 from app.main import ok
 from app.models import Decision, ProjectMember, Task, User
 from app.schemas import AskRequest, DecisionCreate, DecisionOut
@@ -100,6 +101,7 @@ def ask_project(
     project_id: int,
     body: AskRequest,
     membership=Depends(get_membership),
+    _quota=Depends(limit("ask", 20, 600)),        # protects the free LLM quota
     db: Session = Depends(get_db),
 ):
     try:

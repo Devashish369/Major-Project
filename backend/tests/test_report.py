@@ -22,7 +22,7 @@ def client():
 
 def reg(client, name):
     r = client.post(f"{API}/auth/register", json={"email": f"{name}@rep.com", "username": name,
-                                                   "full_name": name.title(), "password": "password123"})
+                                                   "full_name": name.title(), "password": "Secure#2026"})
     return {"Authorization": f"Bearer {r.json()['data']['access_token']}"}
 
 

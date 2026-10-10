@@ -67,6 +67,12 @@ def reset_db():
     autouse=True means this fixture runs for EVERY test in EVERY file.
     """
     import app.models  # noqa: F401 – register all ORM models
+    from app import ratelimit
+    from app.services import security_events
     Base.metadata.create_all(bind=engine_test)
+    ratelimit.reset()                                   # AI limits are per user id; ids restart per test
+    saved = security_events.MAX_REGISTER_PER_IP
+    security_events.MAX_REGISTER_PER_IP = 10_000        # many tests register many users from one "IP"
     yield
+    security_events.MAX_REGISTER_PER_IP = saved
     Base.metadata.drop_all(bind=engine_test)

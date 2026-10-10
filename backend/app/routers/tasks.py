@@ -57,6 +57,7 @@ def _task_out(task: Task, db: Session, dep_ids=None) -> dict:
 
     return TaskOut(
         id=task.id,
+        number=task.number,
         project_id=task.project_id,
         sprint_id=task.sprint_id,
         title=task.title,

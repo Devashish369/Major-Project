@@ -28,7 +28,7 @@ def client():
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def register(client, email, username="user", full_name="User", password="password123"):
+def register(client, email, username="user", full_name="User", password="Secure#2026"):
     r = client.post("/api/v1/auth/register", json={
         "email": email, "username": username,
         "full_name": full_name, "password": password,

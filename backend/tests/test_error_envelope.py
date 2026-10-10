@@ -26,7 +26,7 @@ def test_401_is_envelope_and_keeps_detail(client):
 
 def test_404_for_non_member_is_envelope(client):
     tok = client.post(f"{API}/auth/register", json={
-        "email": "e@t.com", "username": "enve", "full_name": "E", "password": "password123"}).json()["data"]["access_token"]
+        "email": "e@t.com", "username": "enve", "full_name": "E", "password": "Secure#2026"}).json()["data"]["access_token"]
     r = client.get(f"{API}/projects/9999", headers={"Authorization": f"Bearer {tok}"})
     assert r.status_code == 404 and _is_envelope(r.json())
 
@@ -54,11 +54,11 @@ def test_500_does_not_leak_internals(client):
 def test_bad_username_is_a_readable_422_and_no_account_is_created(client):
     """The exact input from a user report: username 'aditya@'."""
     r = client.post(f"{API}/auth/register", json={
-        "email": "aditya@123.com", "username": "aditya@", "full_name": "Aditya Pande", "password": "password123"})
+        "email": "aditya@123.com", "username": "aditya@", "full_name": "Aditya Pande", "password": "Secure#2026"})
     body = r.json()
     assert r.status_code == 422 and _is_envelope(body)
     assert "letters, digits, and underscores" in body["message"] and "Value error" not in body["message"]
     assert isinstance(body["detail"], list)                     # list shape is kept for old clients ...
     # ... so the frontend must never render `detail` directly (see frontend/src/api/errors.js)
-    login = client.post(f"{API}/auth/login", json={"email": "aditya@123.com", "password": "password123"})
+    login = client.post(f"{API}/auth/login", json={"email": "aditya@123.com", "password": "Secure#2026"})
     assert login.status_code == 401                             # nothing was stored

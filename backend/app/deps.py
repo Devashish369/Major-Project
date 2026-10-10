@@ -16,7 +16,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models import Project, ProjectMember, User
-from app.security import decode_access_token
+from app.security import decode_claims
 
 
 # ── JWT bearer extraction ─────────────────────────────────────────────────────
@@ -41,12 +41,14 @@ def get_current_user(
     if credentials is None:
         raise _CRED_EXCEPTION
 
-    user_id = decode_access_token(credentials.credentials)
-    if user_id is None:
+    claims = decode_claims(credentials.credentials)
+    if claims is None:
         raise _CRED_EXCEPTION
+    user_id, token_version = claims
 
     user = db.execute(select(User).where(User.id == user_id)).scalar_one_or_none()
-    if user is None:
+    # token_version changes on password change / "sign out everywhere": older tokens are revoked
+    if user is None or token_version != user.token_version:
         raise _CRED_EXCEPTION
 
     return user

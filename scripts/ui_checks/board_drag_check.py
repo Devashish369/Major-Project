@@ -8,7 +8,7 @@ API = "http://localhost:8000/api/v1"; WEB = "http://localhost:5173"
 sfx = uuid.uuid4().hex[:6]
 c = httpx.Client(timeout=30)
 r = c.post(f"{API}/auth/register", json={"email": f"board{sfx}@boardtest.org", "username": f"board{sfx}",
-                                          "full_name": "Board Tester", "password": "password123"})
+                                          "full_name": "Board Tester", "password": "Secure#2026"})
 tok = r.json()["data"]["access_token"]; H = {"Authorization": "Bearer " + tok}
 pid = c.post(f"{API}/projects", json={"title": f"Board test {sfx}"}, headers=H).json()["data"]["id"]
 t1 = c.post(f"{API}/projects/{pid}/tasks", json={"title": "Alpha task", "status": "todo"}, headers=H).json()["data"]["id"]

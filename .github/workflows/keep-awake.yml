@@ -1,0 +1,28 @@
+# Keeps the free Render API awake during the day so visitors don't wait ~1 minute for a cold start.
+#
+# Free: GitHub Actions minutes are free and unlimited for PUBLIC repositories (this repo is public).
+# Render: the free plan gives 750 instance hours per month; 06:30–00:30 IST every day is about
+#         560 hours, so there is room left for one more free service, and the API still sleeps at night.
+# Neon:   /api/v1/health does NOT touch the database, so this never keeps Neon awake (Neon free
+#         compute hours are not used by these pings).
+# Note: GitHub pauses scheduled workflows after 60 days without any commit; re-enable it in the
+#       Actions tab if that happens.  Delete this file to switch the pings off.
+name: keep-awake
+
+on:
+  schedule:
+    - cron: "*/10 1-18 * * *"     # every 10 min, 01:00–18:59 UTC = 06:30–00:29 IST
+  workflow_dispatch: {}           # "Run workflow" button in the Actions tab
+
+permissions: {}                   # this job needs no access to the repository
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Ping the API health endpoint
+        run: |
+          curl --silent --show-error --max-time 100 --retry 2 --retry-delay 5 \
+               -o /dev/null -w "HTTP %{http_code} in %{time_total}s\n" \
+               https://intellipm-api.onrender.com/api/v1/health

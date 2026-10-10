@@ -13,10 +13,12 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Area | What you can do | Where |
 |---|---|---|
 | Projects & team | Create projects, add members by e-mail, set roles, weekly capacity and 1–5 skill levels. **Each person sees only the projects they created or were added to** (everything else answers 404). A new account starts with an empty dashboard until an admin adds it from the project's Team tab using the person's e-mail; it then appears on their dashboard within 30 seconds | Dashboard, Team tab, profile |
-| Kanban | Drag a card into **any** column (empty ones too) or use the drawer's one-click status buttons; the card, the project status and everyone else's board update live. Edit in a drawer (Esc closes it), add dependencies (cycles rejected), filter by sprint, a warning if you add a task whose title already exists, full activity log | Board tab |
+| Numbering | Tasks are **#1, #2 …** and decisions **D1, D2 …** counted separately in every project (a new project starts at #1 again; a deleted task's number is never reused) | Everywhere |
+| Kanban | Drag a card into **any** column (empty ones too) or use the drawer's one-click status buttons; the card, the project status and everyone else's board update live. Edit in a drawer (Esc closes it), add dependencies by picking the task (cycles rejected), filter by sprint, a warning if you add a task whose title already exists, full activity log | Board tab |
 | AI planner | One sentence → draft plan (sprints, tasks, estimates, dependencies). Labelled "AI Generated" or "Cached Plan". Admin applies it. | Plan tab |
 | Estimate check | A model trained on 23,000 real Jira issues suggests hours next to the LLM's; large disagreements are flagged | Plan tab |
-| Assignment | Optimal task → person matching with a plain-English reason for every row | Team tab |
+| Assignment | Optimal task → person matching with a plain-English reason for every row. Skill names are matched with synonyms (ReactJS = React, ML = machine learning). **The admin can change the suggested person on any row** (every member is listed with their score) or leave a task unassigned before applying; overrides are recorded in the activity log | Team tab |
+| Skills to learn | For every skill the open tasks need but **nobody on the team has**, it suggests who should learn it: the person whose existing skill is most related (e.g. RAG → Generative AI) and the person with the lowest workload | Team tab |
 | Workload | Utilisation bars: overloaded / at risk / healthy / available | Team + Analytics tabs |
 | Forecast | Monte Carlo P50 / P80 / P90 finish dates and probability of missing the due date | Analytics tab |
 | Health score | 0–100 with the four penalties that explain it; Low / Medium / High risk badge on every dashboard card | Analytics tab, Dashboard |
@@ -26,6 +28,7 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Live updates | When a teammate creates, edits, moves or deletes a task, your Board and Graph update without a refresh (small "Live" badge; falls back to normal REST if the socket is unavailable) | Board / Graph tabs |
 | Decision log + Ask | Record decisions with reasons; ask questions and get answers that cite their sources | Decisions tab |
 | Project report | One printable report per project: executive summary, key insights and suggested actions written by fixed rules (no LLM) from the health score, forecast, workload, ML risk, overdue and blocked tasks, decisions and activity. "Print / Save as PDF" | Report tab |
+| Account security | Recent sign-in activity (with IP and browser), warning after failed attempts, change password, sign out everywhere; brute-force protection, strong-password rules, security headers. See `docs/SECURITY.md` | `Security` button on the dashboard |
 | Benchmarks | Metrics of the estimator, the risk model and the NASA93 effort benchmark | `Benchmarks` button on the dashboard |
 
 ## Architecture
@@ -152,7 +155,7 @@ python -m seed.seed_demo --verify
 
 ```bash
 cd backend
-python -m pytest tests -q                                                        # SQLite, in memory: 267 tests
+python -m pytest tests -q                                                        # SQLite, in memory: 304 tests
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
 
@@ -254,6 +257,8 @@ How fast a screen feels is decided mostly by the **number of database queries pe
 
 Other changes: the project check on every request costs one query instead of two; API responses over 1 KB are gzip-compressed; the main JavaScript file is 408 kB instead of 890 kB (122 kB instead of 262 kB compressed) because the charts, graph, report and plan tabs download only when opened; the page wakes the sleeping free server the moment it opens. `backend/tests/test_performance.py` fails if a list endpoint starts issuing more queries as data grows.
 
+Network round trips (second round, 2026-10-11): browsers remember the CORS "preflight" answer for 2 hours instead of 10 minutes (one hidden round trip less per call); the database connection is only re-checked after 30 s idle instead of before every request (one database round trip less per request); assignment apply loads its tasks and members in 2 queries instead of 2 per row; JS/CSS files are cached for a year. Every response carries a `Server-Timing` header (browser DevTools → Network → Timing) showing time in our code vs. the database and the number of queries, and `GET /api/v1/health/db` reports the API↔database round-trip time. A GitHub Actions job (`.github/workflows/keep-awake.yml`, free for public repos) pings `/api/v1/health` every 10 minutes from 06:30 to 00:30 IST so visitors don't wait for a cold start.
+
 What code cannot fix on the free plans: the API sleeps after 15 minutes idle (about a minute to wake), Neon's database suspends after 5 minutes idle (about a second to wake), and a Render server in a different region from the Neon database adds tens of milliseconds to every query (see DEPLOY_CHECKLIST.md, "Speed").
 
 ## Known limitations
@@ -267,14 +272,14 @@ What code cannot fix on the free plans: the API sleeps after 15 minutes idle (ab
 * **Ask has no offline fallback**: without an LLM key, or with `USE_CACHED_PLAN_ONLY=true`, it returns a clear message instead of an answer. Answers are only as good as what was recorded in the tasks and decisions.
 * **Sprints are minimal** – sprints are created by applying an AI plan and can be listed and filtered; manual sprint editing is future scope. (`GET /projects/{id}/sprints` lists them with task counts; the Board has a sprint filter and a sprint badge on each card.)
 * **Live updates are basic**: they cover task changes only (not decisions or team changes), only while the Board or Graph tab is open, and rooms live in one server process's memory, so they work with one backend instance (as on Render's free tier) but would need a message broker such as Redis to scale out. The JWT travels in the WebSocket URL (a browser limitation), so it can appear in server access logs.
-* **Security scope**: JWT in `localStorage`, no refresh tokens or password reset, no rate limiting; fine for a demo, not for production.
+* **Security scope**: see `docs/SECURITY.md`. Sign-in is rate-limited and audited and tokens can be revoked, but there is no two-factor authentication and no e-mail password reset (no free e-mail service is used); AI rate limits are kept in memory and reset when the free server restarts.
 * **Public demo login**: `demo@intellipm.demo` / `Demo@1234` is printed in this README and the seed script and is admin of all demo projects. Anyone who finds a deployed URL can log in and change or delete the demo data. Acceptable for a short-lived demo deployment that holds only fictional data; mitigations: re-seed before presenting (it repairs everything), keep the URL private, set the `DEMO_PASSWORD` environment variable when seeding a public deployment (see Deployment step D), and never put real data in that database.
 * **Each browser tab has its own login**: sign in as a different person in each tab (for example a manager in one and a team member in another). A refresh keeps a tab signed in; closing the tab signs it out, and a new tab starts signed out. Cached data is cleared on every login, registration and sign-out so accounts never mix.
 * **Permissions are coarse**: any project member may edit project details and add *regular* members; only admins can add admins, remove members, change roles, delete the project or apply AI plans/assignments.
 * **Work due today counts as late**: if a project's due date is today and any work is left, the forecast reports a 100 % chance of being late (late means "finishes after the due date").
 * **Project status is derived, not typed**: with tasks, it is *Completed* when all are done, *In Progress* once any is started or done, otherwise *Pending*; a project with no tasks keeps the status set when it was created.
-* **Single JavaScript bundle**: the production build is one ~900 kB chunk (no code splitting); fine on a laptop, slower on a weak connection.
-* **Free hosting**: Render's free tier sleeps when idle (30–60 s wake-up) and Neon's free tier may pause the database.
+* **Free hosting**: Render's free tier sleeps when idle (about a minute to wake; the keep-awake job covers daytime) and Neon's database sleeps after 5 idle minutes. Everything runs on free plans only – limits and the rules that keep it at ₹0 are in `docs/FREE_TIER.md`.
+* **Skill relatedness is a hand-made map** (`services/skills.py`, about 110 skills in 12 families, 57 explicit pairs and 63 synonyms). Unknown skills only match by shared words, so a very niche skill may get no "closest" suggestion; the lowest-workload suggestion is always given.
 
 ## API
 
