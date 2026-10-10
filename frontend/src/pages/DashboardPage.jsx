@@ -11,11 +11,15 @@
  * Uses @tanstack/react-query for server state.
  */
 import { useState } from 'react';
+import { SORT_OPTIONS, sortProjects } from '../api/projectSort';
+
+const SORT_KEY = 'intellipm_project_sort';
+const savedSort = () => { try { return localStorage.getItem(SORT_KEY) || 'default'; } catch { return 'default'; } };
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   BarChart2, Plus, LogOut, User, Calendar, Users,
-  CheckCircle, Clock, AlertCircle, Loader2, FolderOpen, ShieldCheck } from 'lucide-react';
+  CheckCircle, Clock, AlertCircle, Loader2, FolderOpen, ShieldCheck, ArrowUpDown } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { listProjects, createProject } from '../api/projects';
 import CreateProjectModal from '../components/CreateProjectModal';
@@ -125,6 +129,8 @@ export default function DashboardPage() {
 
   const [showCreate, setShowCreate] = useState(false);
   const [showSkills, setShowSkills] = useState(false);
+  const [sortMode, setSortMode] = useState(savedSort);   // remembered in this browser
+  const changeSort = (v) => { setSortMode(v); try { localStorage.setItem(SORT_KEY, v); } catch { /* private mode */ } };
 
   const { data: projects = [], isLoading, error } = useQuery({
     queryKey: ['projects'],
@@ -202,6 +208,22 @@ export default function DashboardPage() {
               {projects.length} project{projects.length !== 1 ? 's' : ''} you're a member of
             </p>
           </div>
+          <div className="flex items-center gap-3">
+          {projects.length > 1 && (
+            <label className="flex items-center gap-2 text-sm text-slate-400">
+              <ArrowUpDown className="h-4 w-4" />
+              <span className="hidden sm:inline">Sort by</span>
+              <select
+                id="project-sort"
+                aria-label="Sort projects"
+                value={sortMode}
+                onChange={(e) => changeSort(e.target.value)}
+                className="rounded-lg border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white outline-none focus:border-indigo-500"
+              >
+                {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </label>
+          )}
           <button
             id="new-project-btn"
             onClick={() => setShowCreate(true)}
@@ -210,6 +232,7 @@ export default function DashboardPage() {
             <Plus className="h-4 w-4" />
             New Project
           </button>
+          </div>
         </div>
 
         {/* Loading state */}
@@ -251,7 +274,7 @@ export default function DashboardPage() {
         {/* Project grid */}
         {!isLoading && projects.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projects.map((p) => (
+            {sortProjects(projects, sortMode).map((p) => (
               <ProjectCard
                 key={p.id}
                 project={p}

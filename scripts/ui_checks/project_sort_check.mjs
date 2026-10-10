@@ -1,0 +1,23 @@
+// Unit check for frontend/src/api/projectSort.js:  node scripts/ui_checks/project_sort_check.mjs
+import assert from 'node:assert/strict';
+import { sortProjects, SORT_OPTIONS } from '../../frontend/src/api/projectSort.js';
+
+const P = [
+  { id: 1, title: 'Alpha', priority: 'low', status: 'completed', done_ratio: 1.0, health_score: 99, created_at: '2026-10-01T00:00:00Z' },
+  { id: 2, title: 'Bravo', priority: 'high', status: 'in_progress', done_ratio: 0.25, health_score: 41, created_at: '2026-10-03T00:00:00Z' },
+  { id: 3, title: 'Charlie', priority: 'medium', status: 'pending', done_ratio: 0, health_score: null, created_at: '2026-10-02T00:00:00Z' },
+  { id: 4, title: 'Delta', priority: 'high', status: 'in_progress', done_ratio: 0.39, health_score: 63, created_at: '2026-10-04T00:00:00Z' },
+  { id: 5, title: 'Echo', priority: 'medium', status: 'pending', done_ratio: 0, health_score: 80, created_at: '2026-10-05T00:00:00Z' },
+];
+const ids = (mode) => sortProjects(P, mode).map((p) => p.id);
+
+assert.deepEqual(ids('default'), [5, 4, 2, 3, 1]);            // newest first
+assert.deepEqual(ids('risk'), [2, 4, 5, 1, 3]);               // lowest health first, no score last
+assert.deepEqual(ids('priority'), [2, 4, 5, 3, 1]);           // high (riskier first), medium, low
+assert.deepEqual(ids('pending'), [3, 5, 2, 4, 1]);            // pending, in progress (least done first), completed
+assert.deepEqual(ids('progress_desc'), [1, 4, 2, 3, 5]);      // 100 %, 39 %, 25 %, 0 % (A→Z)
+assert.deepEqual(ids('progress_asc'), [3, 5, 2, 4, 1]);
+assert.deepEqual(ids('nonsense'), ids('default'));
+const copy = [...P]; sortProjects(P, 'risk'); assert.deepEqual(P, copy);   // input not mutated
+assert.equal(SORT_OPTIONS.length, 6);
+console.log('projectSort.js: all checks passed');
