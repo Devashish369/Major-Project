@@ -1,4 +1,4 @@
-"""Browser check: the dashboard "Sort by" menu reorders the cards and is remembered after a reload."""
+"""Browser check: dashboard sort = one field menu + a direction button; both remembered after a reload."""
 import re, sys, time
 from playwright.sync_api import sync_playwright
 
@@ -6,13 +6,14 @@ WEB = "http://localhost:5173"
 results = []
 def check(name, ok): results.append(bool(ok)); print(("PASS " if ok else "FAIL ") + name)
 
+RANK = {"Pending": 0, "In Progress": 1, "Completed": 2}
 def cards(page):
     out = []
     for c in page.locator("main .cursor-pointer").all():
         t = c.inner_text()
         m = re.search(r"Progress\s+(\d+)%", t); h = re.search(r"Health (\d+)", t)
-        out.append({"progress": int(m.group(1)) if m else 0, "health": int(h.group(1)) if h else 999,
-                    "status": "Pending" if "Pending" in t else "Completed" if "Completed" in t else "In Progress"})
+        out.append({"progress": int(m.group(1)) if m else 0, "health": int(h.group(1)) if h else None,
+                    "status": RANK["Pending" if "Pending" in t else "Completed" if "Completed" in t else "In Progress"]})
     return out
 
 with sync_playwright() as p:
@@ -21,29 +22,31 @@ with sync_playwright() as p:
     page.goto(WEB + "/login"); page.wait_for_load_state("networkidle")
     page.fill('input[type="email"]', "demo@intellipm.demo"); page.fill('input[type="password"]', "Demo@1234")
     page.get_by_role("button", name="Sign in").click(); page.wait_for_url("**/dashboard"); page.wait_for_load_state("networkidle")
-    page.wait_for_selector("#project-sort"); sel = page.locator("#project-sort")
-    check("sort menu has 6 choices", sel.locator("option").count() == 6)
+    page.wait_for_selector("#project-sort")
+    sel, flip = page.locator("#project-sort"), page.locator("#project-sort-direction")
+    check("five short field names, no duplicates",
+          sel.locator("option").all_inner_texts() == ["Date", "Risk", "Priority", "Status", "Progress"])
 
-    def run(value):
-        sel.select_option(value); time.sleep(0.4); return cards(page)
+    def run(field, reverse):
+        sel.select_option(field); time.sleep(0.3)
+        if reverse:
+            flip.click(); time.sleep(0.3)
+        return cards(page)
 
-    r = run("risk"); hs = [c["health"] for c in r]
-    check("risk: lowest health first", hs == sorted(hs) and len(r) >= 16)
-    r = run("progress_desc"); ps = [c["progress"] for c in r]
-    check("progress (highest): descending", ps == sorted(ps, reverse=True))
-    r = run("progress_asc"); ps = [c["progress"] for c in r]
-    check("progress (lowest): ascending", ps == sorted(ps))
-    r = run("pending"); rank = {"Pending": 0, "In Progress": 1, "Completed": 2}
-    st = [rank[c["status"]] for c in r]
-    check("pending first, completed last", st == sorted(st))
-    run("priority")
-    borders = page.locator("main .cursor-pointer").evaluate_all(
-        "els => els.map(e => e.className.match(/border-l-(red|amber|slate)-500/)?.[1] || 'none')")
-    order = {"red": 0, "amber": 1, "slate": 2, "none": 3}
-    check("priority: high, medium, low", [order[x] for x in borders] == sorted(order[x] for x in borders))
-    page.reload(); page.wait_for_load_state("networkidle"); time.sleep(0.5)
-    check("choice remembered after reload", page.locator("#project-sort").input_value() == "priority")
-    page.locator("#project-sort").select_option("default")
+    for field, attr in [("risk", "health"), ("status", "status"), ("progress", "progress")]:
+        natural = [c[attr] for c in run(field, False) if c[attr] is not None]
+        rev = [c[attr] for c in run(field, True) if c[attr] is not None]
+        if field == "progress":
+            check(f"{field}: Highest then reversed Lowest", natural == sorted(natural, reverse=True) and rev == sorted(rev))
+        else:
+            check(f"{field}: natural then reversed", natural == sorted(natural) and rev == sorted(rev, reverse=True))
+    check("direction label follows the field (Progress reversed shows 'Lowest')", "Lowest" in flip.inner_text())
+    run("priority", True)
+    check("choosing a field resets to its natural direction, button flips it", "Low" in flip.inner_text())
+    page.reload(); page.wait_for_load_state("networkidle"); page.wait_for_selector("#project-sort"); time.sleep(0.4)
+    check("field and direction remembered after reload",
+          page.locator("#project-sort").input_value() == "priority" and "Low" in page.locator("#project-sort-direction").inner_text())
+    page.locator("#project-sort").select_option("date")
     b.close()
 
 print(f"\n{sum(results)}/{len(results)} checks passed")
