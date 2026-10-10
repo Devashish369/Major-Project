@@ -82,12 +82,20 @@ Preflight already done in the repo (2026-10-08):
 
 The code is already optimised (see README "Speed"). These settings decide the rest:
 
+- [ ] **Measured on 2026-10-11: `db_round_trip_ms` ≈ 175 ms** (three readings 224 / 175 / 174). The API and the
+  database are on different continents, and each page request makes 5–6 database round trips, so about
+  **1 second of every request** is this distance. Fixing the regions is the single biggest speed-up left. Check both:
+  Render → `intellipm-api` → the region is shown next to the service name (Settings → Region); Neon → project
+  dashboard → Region. Then use the steps below (fastest for users in India: both in **Singapore**; quickest to do:
+  a new Neon project in Render's region).
 - [ ] **Measure the API↔database distance** after the deploy: open `https://intellipm-api.onrender.com/api/v1/health/db`.
   `db_round_trip_ms` of about **1–5** means Render and Neon are in the same region: nothing to do.
-  **30 or more** means they are in different regions (Render's default is Oregon, your Neon project is
-  *AWS US East 2, Ohio*), and every request pays that 4–6 times. A region can never be changed in place;
+  **30 or more** means they are in different regions (Render's default is Oregon; the database is
+  in another one), and every request pays that 4–6 times. A region can never be changed in place;
   the easier fix is on the Neon side:
-  1. Neon → New project → region **AWS US West 2 (Oregon)** (if Render shows Oregon) → copy the connection string.
+  1. Neon → New project → choose the region matching Render (Render Oregon → **AWS US West 2 (Oregon)**,
+     Render Ohio → AWS US East 2, Render Frankfurt → AWS Europe Central 1, Render Singapore → AWS Asia Pacific 1
+     (Singapore)) → copy the connection string.
   2. Render → `intellipm-api` → Environment → replace `DATABASE_URL` → Save (it redeploys).
   3. From your PC, seed the new database (section D, with `DEMO_PASSWORD` set). Accounts created on the old
      database are not copied; register them again (or keep the old one if they matter).
