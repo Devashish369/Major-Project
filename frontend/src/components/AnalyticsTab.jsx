@@ -12,9 +12,13 @@ import {
 import { getHealth, getForecast, getBurndown } from '../api/analytics';
 import { getWorkload } from '../api/assignments';
 
-const GRID = '#334155';
-const AXIS = { fill: '#94a3b8', fontSize: 11 };
-const TIP = { backgroundColor: '#0f172a', border: '1px solid #334155', borderRadius: 8, fontSize: 12 };
+// Theme-aware: the values come from index.css (dark by default, light under data-theme="light")
+const GRID = 'var(--chart-grid)';
+const AXIS = { fill: 'var(--chart-axis)', fontSize: 11 };
+const TIP = {
+  backgroundColor: 'var(--chart-tip-bg)', border: '1px solid var(--chart-tip-border)',
+  borderRadius: 8, fontSize: 12, color: 'var(--chart-ink)',
+};
 
 // Shared card shell that renders the right state for a react-query result.
 function Card({ title, subtitle, query, isEmpty, emptyText, children, className = '' }) {
@@ -143,7 +147,7 @@ function ForecastCard({ query, dueDate }) {
         const hist = d.histogram.map((b) => ({ ...b, label: b.start_date.slice(5) }));
         const marks = [
           ['P50', d.p50, '#22c55e'], ['P80', d.p80, '#f59e0b'], ['P90', d.p90, '#ef4444'],
-          ['Due', dueDate, '#e2e8f0'],
+          ['Due', dueDate, 'var(--chart-ink)'],
         ].filter(([, date]) => date).map(([n, date, c]) => [n, date, c, bucketLabel(hist, date)]);
         return (
           <div>
@@ -189,7 +193,7 @@ function BurndownCard({ query }) {
             <XAxis dataKey="date" tick={AXIS} tickFormatter={(v) => v.slice(5)} interval="preserveStartEnd" />
             <YAxis tick={AXIS} />
             <Tooltip contentStyle={TIP} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
+            <Legend wrapperStyle={{ fontSize: 12 }} formatter={(v) => <span style={{ color: 'var(--chart-axis)' }}>{v}</span>} />
             <Line type="linear" dataKey="ideal" name="Ideal" stroke="#64748b" strokeDasharray="5 4" dot={false} />
             <Line type="stepAfter" dataKey="actual" name="Actual" stroke="#6366f1" strokeWidth={2} dot={false} connectNulls={false} />
           </LineChart>

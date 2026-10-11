@@ -1,6 +1,5 @@
 """tests/test_error_envelope.py – every error response uses the spec §7 envelope."""
 import pytest
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from app.main import app

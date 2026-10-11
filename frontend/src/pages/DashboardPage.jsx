@@ -11,6 +11,7 @@
  * Uses @tanstack/react-query for server state.
  */
 import { useState } from 'react';
+import ThemeToggle from '../components/ThemeToggle';
 import { SORT_FIELDS, parseSort, serializeSort, sortProjects } from '../api/projectSort';
 
 const SORT_KEY = 'intellipm_project_sort';
@@ -43,7 +44,7 @@ function StatusBadge({ status }) {
   const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
   const Icon = cfg.icon;
   return (
-    <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>
+    <span className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs px-2 py-0.5 rounded-full font-medium ${cfg.color}`}>
       <Icon className="h-3 w-3" />
       {cfg.label}
     </span>
@@ -60,7 +61,7 @@ function ProjectCard({ project, onClick }) {
         border-l-4 ${PRIORITY_COLOR[project.priority] || 'border-l-slate-700'}`}
     >
       <div className="flex items-start justify-between gap-2 mb-3">
-        <h3 className="font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
+        <h3 className="min-w-0 font-semibold text-white group-hover:text-indigo-300 transition-colors leading-tight">
           {project.title}
         </h3>
         <StatusBadge status={project.status} />
@@ -156,60 +157,62 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* ── Navbar ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900/95 backdrop-blur px-6 py-3 flex items-center justify-between">
+      <header className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900/95 backdrop-blur px-4 sm:px-6 py-3 flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-indigo-600 p-1.5">
             <BarChart2 className="h-5 w-5 text-white" />
           </div>
-          <span className="text-lg font-bold">IntelliPM</span>
+          <span className="hidden sm:inline text-lg font-bold">IntelliPM</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ThemeToggle />
           <button
-            id="benchmarks-link"
+            id="benchmarks-link" aria-label="Benchmarks"
             onClick={() => navigate('/benchmarks')}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 sm:px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
           >
             <BarChart2 className="h-4 w-4" />
-            Benchmarks
+            <span className="hidden lg:inline">Benchmarks</span>
           </button>
           <button
-            id="security-link"
+            id="security-link" aria-label="Account security"
             onClick={() => navigate('/security')}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 sm:px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
           >
             <ShieldCheck className="h-4 w-4" />
-            Security
+            <span className="hidden lg:inline">Security</span>
           </button>
           <button
             id="skills-editor-btn"
+            aria-label="Your profile and skills"
             onClick={() => setShowSkills(true)}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 sm:px-3 py-1.5 text-sm text-slate-300 hover:border-indigo-500 hover:text-white transition"
           >
             <User className="h-4 w-4" />
-            {user?.full_name}
+            <span className="hidden sm:inline max-w-[10rem] truncate">{user?.full_name}</span>
           </button>
           <button
-            id="logout-button"
+            id="logout-button" aria-label="Sign out"
             onClick={handleLogout}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-3 py-1.5 text-sm text-slate-300 hover:border-slate-400 hover:text-white transition"
+            className="flex items-center gap-1.5 rounded-lg border border-slate-600 px-2.5 sm:px-3 py-1.5 text-sm text-slate-300 hover:border-slate-400 hover:text-white transition"
           >
             <LogOut className="h-4 w-4" />
-            Sign out
+            <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
       </header>
 
       {/* ── Body ───────────────────────────────────────────────────────────── */}
-      <main className="max-w-6xl mx-auto px-6 py-8">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8">
         {/* Header row */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-8">
           <div>
             <h1 className="text-2xl font-bold text-white">Projects</h1>
             <p className="text-slate-400 text-sm mt-0.5">
               {projects.length} project{projects.length !== 1 ? 's' : ''} you're a member of
             </p>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
           {projects.length > 1 && (
             <div className="flex items-center gap-2 text-sm text-slate-400">
               <ArrowUpDown className="h-4 w-4" />

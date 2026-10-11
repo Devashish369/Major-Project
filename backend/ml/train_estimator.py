@@ -26,7 +26,6 @@ Design decisions (viva-ready):
 """
 
 import json
-import sys
 from pathlib import Path
 
 import joblib

@@ -17,7 +17,7 @@ Design decisions (viva-ready):
 """
 
 import logging
-from datetime import date, datetime, timezone
+from datetime import date
 
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -25,12 +25,11 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.deps import get_current_user, get_membership
-from app.models import Project, ProjectMember, Task, TaskDependency, User
+from app.models import Project, ProjectMember, Task, TaskDependency
 from app.services.forecast import run_forecast
 from app.services.health import compute_health
 from app.main import ok
 import json
-import logging
 from pathlib import Path
 
 logger = logging.getLogger(__name__)

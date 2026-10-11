@@ -125,9 +125,7 @@ def run_forecast(
     """
     today = today or date.today()
 
-    # ── 1. Filter tasks with usable estimates ─────────────────────────────────
-    usable = [t for t in open_tasks if (t.get("estimate_hours") or 0) > 0]
-    open_ids = {t["id"] for t in usable}
+    # ── 1. Estimates (tasks without one use the default) ─────────────────────────────────
     default_estimate = 4.0  # h – for tasks with no estimate
 
     # Build estimate dict (include tasks with no estimate using default)
@@ -202,7 +200,6 @@ def run_forecast(
     # ── 6. Monte Carlo ────────────────────────────────────────────────────────
     rng = np.random.default_rng(seed)
     task_id_list = list(open_ids_all)
-    n_tasks = len(task_id_list)
     est_array = np.array([estimates[tid] for tid in task_id_list])
 
     durations_arr = _simulate_durations(

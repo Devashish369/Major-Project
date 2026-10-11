@@ -15,7 +15,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.database import get_db
-from app.models import Project, ProjectMember, User
+from app.models import ProjectMember, User
 from app.security import decode_claims
 
 

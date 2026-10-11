@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { changePassword, getSecurityEvents, logoutAll } from '../api/auth';
 import { errorMessage } from '../api/errors';
 import { passwordProblem } from '../api/passwordPolicy';
+import ThemeToggle from '../components/ThemeToggle';
 
 const EVENT_TEXT = {
   login_success: { text: 'Signed in', bad: false },
@@ -84,6 +85,7 @@ export default function SecurityPage() {
         </button>
         <ShieldCheck className="h-5 w-5 text-indigo-400" />
         <h1 className="text-lg font-semibold">Account security</h1>
+        <ThemeToggle className="ml-auto" />
       </header>
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 py-8 space-y-6">
@@ -158,7 +160,7 @@ export default function SecurityPage() {
               {formErr && <p className="text-sm text-red-400">{formErr}</p>}
               {done && <p className="text-sm text-green-400 flex items-center gap-1.5"><CheckCircle2 className="h-4 w-4" /> {done}</p>}
               <button type="submit" disabled={pwMut.isPending}
-                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium hover:bg-indigo-500 disabled:opacity-60">
+                className="rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 disabled:opacity-60">
                 {pwMut.isPending ? 'Saving…' : 'Change password'}
               </button>
             </form>

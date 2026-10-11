@@ -50,7 +50,7 @@ def main():
     rows = [
         ("GET /auth/me", "/auth/me"),
         ("GET /projects  (dashboard, 16 cards)", "/projects"),
-        (f"GET project (30-task project)", f"/projects/{big}"),
+        ("GET project (30-task project)", f"/projects/{big}"),
         ("GET members", f"/projects/{big}/members"),
         ("GET tasks", f"/projects/{big}/tasks"),
         ("GET analytics/health", f"/projects/{big}/analytics/health"),

@@ -26,7 +26,6 @@ import json
 from pathlib import Path
 
 import joblib
-import numpy as np
 import pandas as pd
 from scipy.io import arff as scipy_arff
 from sklearn.ensemble import GradientBoostingRegressor

@@ -12,9 +12,9 @@ All list responses include computed fields:
   task_count, member_count, done_ratio, health_score (null until M7).
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from app.database import get_db
 from app.deps import get_current_user, get_membership, require_admin

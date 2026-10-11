@@ -119,7 +119,7 @@ function Column({ column, tasks, onCardClick, onAddTask, sprintNames, memberName
   return (
     <div
       ref={setNodeRef}
-      className={`flex flex-col min-h-[400px] rounded-xl border bg-slate-800/50 border-t-4 transition-colors ${column.color}
+      className={`snap-start flex flex-col min-h-[400px] rounded-xl border bg-slate-800/50 border-t-4 transition-colors ${column.color}
         ${isOver ? 'border-indigo-400 bg-indigo-500/10' : 'border-slate-700'}`}
     >
       {/* Column header */}
@@ -127,7 +127,7 @@ function Column({ column, tasks, onCardClick, onAddTask, sprintNames, memberName
         <div className="flex items-center gap-2">
           <Icon className="h-4 w-4 text-slate-400" />
           <span className="text-sm font-semibold text-slate-300">{column.label}</span>
-          <span className="text-xs bg-slate-700 text-slate-400 rounded-full px-2 py-0.5">{tasks.length}</span>
+          <span className="text-xs bg-slate-700 text-slate-300 rounded-full px-2 py-0.5">{tasks.length}</span>
         </div>
         <button
           id={`add-task-${column.id}`}
@@ -240,7 +240,9 @@ export default function KanbanBoard({ tasks, projectId }) {
             </select>
           </div>
         )}
-        <div className="grid grid-cols-3 gap-4">
+        {/* phones: the three columns scroll sideways (one column per screen) instead of squeezing */}
+        <div className="-mx-4 overflow-x-auto px-4 pb-2 sm:mx-0 sm:px-0 snap-x snap-mandatory sm:snap-none">
+        <div className="grid grid-cols-[repeat(3,minmax(17rem,1fr))] gap-4">
           {COLUMNS.map((col) => (
             <Column
               key={col.id}
@@ -252,6 +254,7 @@ export default function KanbanBoard({ tasks, projectId }) {
               memberNames={memberNames}
             />
           ))}
+        </div>
         </div>
 
         {/* Drag overlay – ghost card */}

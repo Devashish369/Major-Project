@@ -26,7 +26,13 @@ with sync_playwright() as p:
             page.goto(f"{WEB}/projects/{pid}"); page.wait_for_load_state("networkidle")
             page.locator("nav button", has_text=tab).first.click()
             page.wait_for_load_state("networkidle"); time.sleep(0.8)
-            if not page.locator("main").inner_text().strip():
+            # lazy tabs show "Loading…" first; only a tab still empty after 10 s counts as blank
+            for _ in range(20):
+                text = page.locator("main").inner_text().strip()
+                if text and text != "Loading…":
+                    break
+                time.sleep(0.5)
+            if not text or text == "Loading…":
                 problems.append((ctx["where"], "blank", "main area is empty"))
     for path, name in [("/dashboard", "Dashboard"), ("/benchmarks", "Benchmarks")]:
         ctx["where"] = name; page.goto(WEB + path); page.wait_for_load_state("networkidle"); time.sleep(1)

@@ -17,7 +17,6 @@ Completed tasks do not count (they're no longer consuming capacity).
 """
 
 from dataclasses import dataclass
-from typing import Optional
 
 
 @dataclass

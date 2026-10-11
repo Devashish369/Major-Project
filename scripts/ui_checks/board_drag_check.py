@@ -24,7 +24,6 @@ def drag(page, title, col_label, dx=0, dy=60):
     """Real pointer drag of the card with `title` to the middle of the column headed `col_label`."""
     card = page.locator("main .cursor-pointer", has_text=title).first
     cb = card.bounding_box()
-    col = page.locator("main h3, main span", has_text=col_label).first
     # the column container = nearest ancestor that has the border-t-4 class
     colbox = page.locator(f"xpath=//span[normalize-space()='{col_label}']/ancestor::div[contains(@class,'border-t-4')][1]").bounding_box()
     sx, sy = cb["x"] + cb["width"] / 2, cb["y"] + cb["height"] / 2

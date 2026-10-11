@@ -18,7 +18,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from app.database import get_db
-from app.deps import get_current_user, get_membership, require_admin
+from app.deps import get_membership, require_admin
 from app.models import ProjectMember, User
 from app.schemas import MemberAdd, MemberOut, MemberUpdate
 from app.main import ok

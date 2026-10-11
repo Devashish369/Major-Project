@@ -6,6 +6,7 @@
  * are handled cleanly. This pattern is reused throughout the project.
  */
 import { useState } from 'react';
+import ThemeToggle from '../components/ThemeToggle';
 import { useQuery } from '@tanstack/react-query';
 import { CheckCircle, XCircle, Loader2, Server } from 'lucide-react';
 import apiClient from '../api/client';
@@ -26,7 +27,8 @@ export default function HealthPage() {
   });
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-6">
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-900 p-6">
+      <ThemeToggle className="absolute top-4 right-4" />
       <div className="w-full max-w-md rounded-2xl border border-slate-700 bg-slate-800 p-8 shadow-2xl">
 
         {/* Header */}

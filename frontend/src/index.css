@@ -19,15 +19,118 @@
 }
 
 
-/* ── CSS custom properties (design tokens) ───────────────────────────────── */
+/* ── App colours ─────────────────────────────────────────────────────────────
+   Page background and text follow the theme through Tailwind's slate variables. */
 :root {
-  --color-primary:   #6366f1;   /* Indigo – main accent */
-  --color-primary-d: #4f46e5;   /* darker shade for hover */
-  --color-bg:        #0f172a;   /* Slate 900 – app background */
-  --color-surface:   #1e293b;   /* Slate 800 – cards / panels */
-  --color-border:    #334155;   /* Slate 700 – borders */
-  --color-text:      #f1f5f9;   /* Slate 100 – primary text */
-  --color-muted:     #94a3b8;   /* Slate 400 – secondary text */
+  --color-bg:   var(--color-slate-900);
+  --color-text: var(--color-slate-100);
+}
+
+/* ── Light theme ("daylight") ────────────────────────────────────────────────
+   The app is written with dark-theme Tailwind classes (bg-slate-900, text-white …).  Tailwind v4
+   reads every colour from a CSS variable, so the light theme simply gives those variables
+   daylight values: the slate scale runs from fog-blue backgrounds to navy ink, "white" text
+   becomes ink, and the light accent shades (indigo-300/400, red-400 …) that were tuned to glow
+   on dark backgrounds become deeper shades that read on white.  Set by data-theme on <html>
+   (public/theme-init.js before first paint, then context/ThemeContext.jsx). */
+:root { color-scheme: dark; }
+/* Dark theme: Tailwind's slate-500 (#64748b) reads at only 3:1 on the dark cards, and it is used for
+   task numbers, dates and hints.  A lighter slate-500 reaches 4.5:1 (WCAG AA). */
+:root:not([data-theme="light"]) { --color-slate-500: #8b98ac; }
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  /* surfaces: app background → cards → recessed inputs */
+  --color-slate-950: #e4e9f0;
+  --color-slate-900: #edf1f6;   /* app background, inputs inside cards */
+  --color-slate-800: #ffffff;   /* cards, panels, drawers */
+  --color-slate-750: #f3f5f9;
+  --color-slate-700: #d6dce6;   /* borders, dividers, quiet fills */
+  --color-slate-600: #b9c2cf;   /* input borders, strong dividers */
+  /* text: muted → ink */
+  --color-slate-500: #637186;
+  --color-slate-400: #4b596d;
+  --color-slate-300: #334155;
+  --color-slate-200: #1e293b;
+  --color-slate-100: #142033;
+  --color-slate-50:  #0e1726;
+  --color-white:     #0e1726;   /* "text-white" = primary ink */
+  /* accents that were light shades for dark backgrounds */
+  --color-indigo-200: #3730a3;
+  --color-indigo-300: #4338ca;
+  --color-indigo-400: #4f46e5;
+  --color-blue-300: #1d4ed8;
+  --color-blue-400: #1d4ed8;
+  --color-green-300: #116b33;
+  --color-green-400: #136f36;
+  --color-emerald-400: #047857;
+  --color-red-300: #b91c1c;
+  --color-red-400: #c81e1e;
+  --color-amber-300: #8a5206;
+  --color-amber-400: #b45309;
+  --color-orange-400: #c2410c;
+  --color-rose-300: #be123c;
+  --color-rose-400: #e11d48;
+
+  /* charts and the dependency graph (used from JS as var(--…)) */
+  --chart-grid: #dde3ec;
+  --chart-axis: #4b596d;
+  --chart-tip-bg: #ffffff;
+  --chart-tip-border: #d6dce6;
+  --chart-ink: #0e1726;
+  --graph-node-ink: #0e1726;
+  --graph-todo-bg: #ffffff;   --graph-todo-border: #94a3b8;
+  --graph-doing-bg: #eff6ff;  --graph-doing-border: #2563eb;
+  --graph-done-bg: #f0fdf4;   --graph-done-border: #16a34a;
+  --graph-blocked-bg: #fef2f2; --graph-blocked-border: #dc2626;
+  --graph-dots: #c3ccd8;
+}
+
+/* Text on solid colour (buttons, avatars, skill pills) stays white in both themes */
+:root[data-theme="light"] :is(.bg-indigo-500, .bg-indigo-600, .bg-green-500, .bg-green-600, .bg-green-700,
+  .bg-red-500, .bg-red-600, .bg-sky-500, .bg-sky-600, .bg-sky-700, .bg-amber-500, .bg-amber-700, .bg-blue-500,
+  .bg-cyan-800, .theme-keep-white),
+:root[data-theme="light"] [class*="hover:bg-indigo-"]:hover,
+:root[data-theme="light"] [class*="hover:bg-green-"]:hover,
+:root[data-theme="light"] [class*="hover:bg-red-6"]:hover {
+  --color-white: #ffffff;
+}
+
+/* Light cards get a hairline shadow so white-on-fog panels keep their edges */
+:root[data-theme="light"] .bg-slate-800 { box-shadow: 0 1px 2px rgb(15 23 42 / 0.06); }
+:root[data-theme="light"] .bg-black\/40, :root[data-theme="light"] .bg-black\/50,
+:root[data-theme="light"] .bg-black\/60 { background-color: rgb(15 23 42 / 0.35); }
+
+/* The printable report is a white paper document in both themes: give it the original palette */
+.print-doc {
+  --color-white: #ffffff;
+  --color-slate-900: #0f172a; --color-slate-800: #1e293b; --color-slate-700: #334155;
+  --color-slate-600: #475569; --color-slate-500: #64748b; --color-slate-400: #94a3b8;
+  --color-slate-300: #cbd5e1; --color-slate-200: #e2e8f0; --color-slate-100: #f1f5f9;
+  --color-slate-50: #f8fafc;
+  box-shadow: 0 1px 3px rgb(15 23 42 / 0.12);
+}
+
+/* Dark-theme values of the same chart variables */
+:root {
+  --chart-grid: #334155;
+  --chart-axis: #94a3b8;
+  --chart-tip-bg: #0f172a;
+  --chart-tip-border: #334155;
+  --chart-ink: #e2e8f0;
+  --graph-node-ink: #e2e8f0;
+  --graph-todo-bg: #1e293b;   --graph-todo-border: #64748b;
+  --graph-doing-bg: #172554;  --graph-doing-border: #3b82f6;
+  --graph-done-bg: #052e16;   --graph-done-border: #22c55e;
+  --graph-blocked-bg: #450a0a; --graph-blocked-border: #ef4444;
+  --graph-dots: #334155;
+}
+
+/* Theme switch: the selected option sits on a raised chip */
+.theme-toggle-active { background-color: #334155; }
+:root[data-theme="light"] .theme-toggle-active {
+  background-color: #ffffff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.12), 0 0 0 1px rgb(15 23 42 / 0.06);
 }
 
 /* ── Base ─────────────────────────────────────────────────────────────────── */
@@ -48,6 +151,28 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+
+/* ── Keyboard focus: a visible ring on every control (mouse clicks don't show it) ── */
+:where(a, button, input, select, textarea, [tabindex], [role="radio"]):focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* Theme switch: colours ease over 150 ms – only while switching, never on page load */
+.theme-switching, .theme-switching * {
+  transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease !important;
+}
+
+/* People who ask their device for less motion get none (spinners slow right down) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .animate-spin { animation: spin 1.5s linear infinite !important; }
+}
 
 /* ── Printable project report (M16) ─────────────────────────────────────────
    Print / Save as PDF from the Report tab: hide the app chrome, keep the white

@@ -4,9 +4,15 @@
 
 Every number the AI layer shows can be traced to a formula or a model described in [How the algorithms work](#how-the-algorithms-work).
 
+| Dark | Light |
+|---|---|
+| ![Dashboard, dark theme](docs/screenshots/02_dashboard.png) | ![Dashboard, light theme](docs/screenshots/14_dashboard_light.png) |
+
+Runs entirely on free plans (Render + Neon + free AI keys) – see [docs/FREE_TIER.md](docs/FREE_TIER.md). Security controls: [docs/SECURITY.md](docs/SECURITY.md).
+
 ## Contents
 
-1. [Features](#features) · 2. [Architecture](#architecture) · 3. [Run it locally](#run-it-locally) · 4. [Environment variables](#environment-variables) · 5. [Rebuild the demo data](#rebuild-the-demo-data) · 6. [Tests](#tests) · 7. [Deployment](#deployment-render--neon-no-docker) · 8. [How the algorithms work](#how-the-algorithms-work) · 9. [Data sources and licences](#data-sources-and-licences) · 10. [Known limitations](#known-limitations) · 11. [API](#api)
+1. [Features](#features) · 2. [Architecture](#architecture) · [Repository layout](#repository-layout) · 3. [Run it locally](#run-it-locally) · 4. [Environment variables](#environment-variables) · 5. [Rebuild the demo data](#rebuild-the-demo-data) · 6. [Tests](#tests) · 7. [Deployment](#deployment-render--neon-no-docker) · 8. [How the algorithms work](#how-the-algorithms-work) · 9. [Data sources and licences](#data-sources-and-licences) · 10. [Known limitations](#known-limitations) · 11. [API](#api)
 
 ## Features
 
@@ -24,7 +30,9 @@ Every number the AI layer shows can be traced to a formula or a model described 
 | Health score | 0–100 with the four penalties that explain it; Low / Medium / High risk badge on every dashboard card | Analytics tab, Dashboard |
 | Delay risk (ML, experimental) | Probability of finishing late with the factors that drive it for this project. Trained on **simulated** data and labelled experimental in the UI; the Monte Carlo forecast is the primary estimate | Analytics tab |
 | Burndown | Ideal vs actual remaining hours per day | Analytics tab |
-| Dependency graph | One node per task, blocked tasks in red, click to open the task | Graph tab |
+| Dependency graph | One node per task, blocked tasks in red, click to open the task. Large dependency levels wrap into stacks of six so task names stay readable | Graph tab |
+| Light / dark theme | **Light**, **Dark** or **Auto** (follows the device setting, also when it changes). The choice is remembered in the browser, applied before the page first paints (no flash) and followed by every open tab. Both themes meet WCAG AA text contrast on every main screen; charts, the dependency graph and the printable report follow it too | Switch in every page header and on the sign-in pages |
+| Works on phones | Pages fit a 390 px screen without sideways scrolling: header buttons collapse to icons, the project tabs scroll, and the board's three columns swipe one at a time. Visible keyboard focus everywhere; reduced-motion respected | Everywhere |
 | Live updates | When a teammate creates, edits, moves or deletes a task, your Board and Graph update without a refresh (small "Live" badge; falls back to normal REST if the socket is unavailable) | Board / Graph tabs |
 | Decision log + Ask | Record decisions with reasons; ask questions and get answers that cite their sources | Decisions tab |
 | Project report | One printable report per project: executive summary, key insights and suggested actions written by fixed rules (no LLM) from the health score, forecast, workload, ML risk, overdue and blocked tasks, decisions and activity. "Print / Save as PDF" | Report tab |
@@ -77,6 +85,22 @@ MajorProject/
 | Database | SQLite (dev) → PostgreSQL (production, e.g. Neon), switched only by `DATABASE_URL` |
 | LLM | Groq (primary) / Gemini (fallback) through the `openai` SDK |
 | ML | scikit-learn, pandas, numpy, scipy (`linear_sum_assignment`), joblib |
+
+## Repository layout
+
+```
+backend/            FastAPI app (app/), tests (304), ML training scripts and models (ml/), demo data (seed/)
+  app/routers/      HTTP endpoints, thin            app/services/  every algorithm, unit-testable
+  app/middleware.py security headers, size limit, Server-Timing    app/migrations.py  start-up schema upgrades
+frontend/           React + Vite + Tailwind v4
+  src/pages/        one file per screen             src/components/ tabs, board, drawer, modals, theme switch
+  src/context/      login (per tab) and theme        src/api/        API calls + pure helpers (sorting, errors, password rules)
+  public/           theme-init.js (theme before first paint)
+scripts/            profile_api.py (queries per endpoint) and ui_checks/ (browser checks)
+docs/               testing report, security, free tier, viva Q&A, screenshots
+render.yaml         Render Blueprint (free web service + static site, security headers)
+.github/workflows/  keep-awake ping (free for public repos)
+```
 
 ## Run it locally
 
@@ -158,6 +182,8 @@ cd backend
 python -m pytest tests -q                                                        # SQLite, in memory: 304 tests
 TEST_DATABASE_URL=postgresql://USER:PASS@HOST/TESTDB python -m pytest tests -q   # same suite on PostgreSQL (wipes that DB)
 ```
+
+Browser checks (Playwright + the installed Edge: board drags, accounts, security, sorting, theme and contrast, the production build under the real Content-Security-Policy) are listed in [scripts/ui_checks/README.md](scripts/ui_checks/README.md).
 
 Covers auth, permissions, tasks and cycle rejection, the planner (LLM always mocked), the assignment optimiser (including a hand-built 3×3 case), workload, forecast, health, burndown, estimator, risk model, decisions/Ask (LLM mocked), the error envelope and the demo-data definitions.
 

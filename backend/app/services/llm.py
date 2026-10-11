@@ -19,7 +19,7 @@ Design decisions (viva-ready explanations):
     but fall back to plain text parsing if the model doesn't.
 """
 
-from openai import OpenAI, OpenAIError
+from openai import OpenAI
 
 from app.config import settings
 

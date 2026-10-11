@@ -43,7 +43,6 @@ Edge cases:
 
 import math
 from dataclasses import dataclass, field
-from typing import Optional
 
 import numpy as np
 from scipy.optimize import linear_sum_assignment

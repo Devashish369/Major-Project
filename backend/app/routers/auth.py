@@ -19,11 +19,11 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.models import User
 from app.schemas import (
-    ChangePasswordRequest, SecurityEventOut, TokenOut, UserCreate, UserLogin, UserOut, UserUpdate,
+    ChangePasswordRequest, SecurityEventOut, UserCreate, UserLogin, UserOut, UserUpdate,
 )
 from app.security import DUMMY_HASH, create_access_token, hash_password, verify_password
 from app.services import security_events as sec
-from app.main import ok, err   # response envelope helpers
+from app.main import ok   # response envelope helpers
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 

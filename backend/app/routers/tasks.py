@@ -17,11 +17,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import select, func
+from sqlalchemy import select
 
 from app.database import get_db
 from app.deps import get_current_user, get_membership
-from app.models import ActivityLog, Project, ProjectMember, Task, TaskDependency, User
+from app.models import ActivityLog, ProjectMember, Task, TaskDependency, User
 from app.schemas import (
     DependencyAdd, DependencyOut, TaskCreate, TaskOut, TaskUpdate,
 )

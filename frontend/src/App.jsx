@@ -14,6 +14,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 
 import { AuthProvider } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
+import ThemeToggle from './components/ThemeToggle';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import HealthPage from './pages/HealthPage';
@@ -40,6 +42,7 @@ export default function App() {
 
   return (
     <ErrorBoundary>
+    <ThemeProvider>
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         {/* AuthProvider must wrap everything that needs auth state */}
@@ -84,7 +87,8 @@ export default function App() {
               path="/benchmarks"
               element={
                 <ProtectedRoute>
-                  <div className="min-h-screen bg-slate-900 p-6">
+                  <div className="relative min-h-screen bg-slate-900 p-6">
+                    <ThemeToggle className="absolute top-4 right-4 z-10" />
                     <Suspense fallback={null}><BenchmarksPage /></Suspense>
                   </div>
                 </ProtectedRoute>
@@ -103,6 +107,7 @@ export default function App() {
         </AuthProvider>
       </BrowserRouter>
     </QueryClientProvider>
+    </ThemeProvider>
     </ErrorBoundary>
   );
 }

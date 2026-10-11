@@ -6,7 +6,9 @@
  *  - BLOCKED = an open task with at least one unfinished dependency -> red
  *  - layout = layered by dependency depth:
  *        depth(task) = 0 if it has no dependencies, else 1 + max(depth of its dependencies)
- *    columns are depths, rows are the tasks of that depth in list order
+ *    columns are depths, rows are the tasks of that depth (by task number); a depth with more than
+ *    MAX_ROWS tasks wraps into several side-by-side stacks, so a project with many independent tasks
+ *    stays wide and short instead of one tall column that has to be zoomed out until it is unreadable
  *  - click a node to open the same TaskDrawer used on the Board
  */
 import { useMemo, useState } from 'react';
@@ -14,18 +16,22 @@ import { ReactFlow, Background, Controls, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Network } from 'lucide-react';
 import TaskDrawer from './TaskDrawer';
+import { useTheme } from '../context/ThemeContext';
 
 const NODE_W = 210;
 const NODE_H = 64;
 const COL_GAP = 90;
 const ROW_GAP = 22;
+const MAX_ROWS = 6;          // tasks per stack before a depth wraps into another stack
+const STACK_GAP = 28;        // gap between stacks of the same depth (columns of different depths use COL_GAP)
 
 const STATUS_STYLE = {
-  todo:        { bg: '#1e293b', border: '#64748b', label: 'To do' },
-  in_progress: { bg: '#172554', border: '#3b82f6', label: 'In progress' },
-  done:        { bg: '#052e16', border: '#22c55e', label: 'Done' },
+  // colours come from index.css so the graph follows the light / dark theme
+  todo:        { bg: 'var(--graph-todo-bg)', border: 'var(--graph-todo-border)', label: 'To do' },
+  in_progress: { bg: 'var(--graph-doing-bg)', border: 'var(--graph-doing-border)', label: 'In progress' },
+  done:        { bg: 'var(--graph-done-bg)', border: 'var(--graph-done-border)', label: 'Done' },
 };
-const BLOCKED = { bg: '#450a0a', border: '#ef4444' };
+const BLOCKED = { bg: 'var(--graph-blocked-bg)', border: 'var(--graph-blocked-border)' };
 
 /** Depth of every task; ignores edges to unknown ids and survives (impossible) cycles. */
 function computeDepths(tasks) {
@@ -49,7 +55,24 @@ function computeDepths(tasks) {
 function buildGraph(tasks) {
   const byId = new Map(tasks.map((t) => [t.id, t]));
   const depths = computeDepths(tasks);
-  const rowInCol = {};
+  // group tasks by depth, ordered by their project number, then give each depth enough stacks
+  const byDepth = new Map();
+  [...tasks].sort((a, b) => (a.number ?? a.id) - (b.number ?? b.id)).forEach((t) => {
+    const d = depths.get(t.id) || 0;
+    if (!byDepth.has(d)) byDepth.set(d, []);
+    byDepth.get(d).push(t);
+  });
+  const place = new Map();      // task id -> {x, y}
+  let x = 0;
+  [...byDepth.keys()].sort((a, b) => a - b).forEach((d) => {
+    const group = byDepth.get(d);
+    const stacks = Math.ceil(group.length / MAX_ROWS);
+    group.forEach((t, i) => {
+      const stack = Math.floor(i / MAX_ROWS);
+      place.set(t.id, { x: x + stack * (NODE_W + STACK_GAP), y: (i % MAX_ROWS) * (NODE_H + ROW_GAP) });
+    });
+    x += stacks * (NODE_W + STACK_GAP) - STACK_GAP + COL_GAP;
+  });
   const blockedIds = new Set(
     tasks
       .filter((t) => t.status !== 'done')
@@ -58,13 +81,11 @@ function buildGraph(tasks) {
   );
 
   const nodes = tasks.map((t) => {
-    const col = depths.get(t.id) || 0;
-    const row = (rowInCol[col] = (rowInCol[col] ?? -1) + 1);
     const blocked = blockedIds.has(t.id);
     const st = blocked ? BLOCKED : STATUS_STYLE[t.status] || STATUS_STYLE.todo;
     return {
       id: String(t.id),
-      position: { x: col * (NODE_W + COL_GAP), y: row * (NODE_H + ROW_GAP) },
+      position: place.get(t.id),
       data: {
         label: (
           <div style={{ textAlign: 'left', lineHeight: 1.25 }}>
@@ -78,7 +99,7 @@ function buildGraph(tasks) {
         ),
       },
       style: {
-        width: NODE_W, height: NODE_H, background: st.bg, color: '#e2e8f0',
+        width: NODE_W, height: NODE_H, background: st.bg, color: 'var(--graph-node-ink)',
         border: `2px solid ${st.border}`, borderRadius: 10, padding: '8px 10px',
         boxShadow: blocked ? '0 0 12px rgba(239,68,68,0.45)' : 'none',
       },
@@ -123,6 +144,7 @@ function Legend({ blocked }) {
 }
 
 export default function GraphTab({ tasks, projectId }) {
+  const { theme } = useTheme();
   const [selectedId, setSelectedId] = useState(null);
   const graph = useMemo(() => buildGraph(tasks), [tasks]);
   const selected = tasks.find((t) => t.id === selectedId);
@@ -145,13 +167,13 @@ export default function GraphTab({ tasks, projectId }) {
           edges={graph.edges}
           onNodeClick={(_, node) => setSelectedId(Number(node.id))}
           fitView
-          fitViewOptions={{ padding: 0.15 }}
+          fitViewOptions={{ padding: 0.15, minZoom: 0.55, maxZoom: 1.1 }}   // never shrink text past readable
           nodesConnectable={false}
-          colorMode="dark"
+          colorMode={theme}
           proOptions={{ hideAttribution: true }}
           minZoom={0.2}
         >
-          <Background color="#334155" gap={20} />
+          <Background color="var(--graph-dots)" gap={20} />
           <Controls showInteractive={false} />
         </ReactFlow>
       </div>

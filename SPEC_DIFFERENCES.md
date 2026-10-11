@@ -17,7 +17,7 @@ Checked against the code and tests on 2026-10-06 and re-checked in the final rev
 |---|---|
 | §7 Realtime `WS /ws/projects/{id}?token=` (M13, stretch) | Built as specified (JWT + membership check; `task_created` / `task_updated` / `task_deleted` events), plus: a `ping`/`pong` keep-alive, a cap of 50 sockets per project, events also sent when dependencies change, assignments are applied, or an AI plan is applied. The frontend connects only while the **Board or Graph** tab is open, shows a Live / Reconnecting badge, and reconnects with back-off. Limits: task events only (not decisions or team changes); one server process (in-memory rooms). |
 | §4 `services/qa.py` | The Ask logic is `services/ask.py` (+ `routers/decisions.py` holds both the decision log and `/ask`). |
-| §4 `backend/app/ml/…` | The ML scripts and artifacts are in `backend/ml/` (a leftover empty `backend/app/ml/` package from an early path bug is harmless and can be deleted). `ai/fallback_plan.json` is at `backend/app/ai/`. |
+| §4 `backend/app/ml/…` | The ML scripts and artifacts are in `backend/ml/`. `ai/fallback_plan.json` is at `backend/app/ai/`. |
 | §4 routers list | Also has `assignments.py` (recommend/apply/workload). |
 | §8.6 `Datasets/*.csv` | The 16 CSVs are read from `Datasets/marked_data/`. |
 | §8.6 "Ridge (or RandomForest)" | TF-IDF (20k features, bigrams, sublinear tf) + Ridge, trained on `log1p(story points)`; predictions are back-transformed. |

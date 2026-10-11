@@ -5,6 +5,7 @@
  * On error: shows the API error message inline.
  */
 import { useState } from 'react';
+import ThemeToggle from '../components/ThemeToggle';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { LogIn, Loader2, Eye, EyeOff, BarChart2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
@@ -40,7 +41,8 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+    <div className="relative min-h-screen flex items-center justify-center bg-slate-900 p-4">
+      <ThemeToggle className="absolute top-4 right-4" />
       <div className="w-full max-w-md">
 
         {/* Logo */}

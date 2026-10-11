@@ -19,6 +19,7 @@ import { getProject, listMembers, addMember, updateMember, removeMember, deleteP
 import { listTasks } from '../api/tasks';
 import { recommendAssignments, applyAssignments, getWorkload, getSkillGaps } from '../api/assignments';
 import AddMemberModal from '../components/AddMemberModal';
+import ThemeToggle from '../components/ThemeToggle';
 import KanbanBoard from '../components/KanbanBoard';
 // Heavy tabs are downloaded only when opened (charts, graph library, report) so the first
 // screen loads much faster.  The Board stays in the main bundle: it is the default tab.
@@ -32,7 +33,8 @@ import { errorMessage } from '../api/errors';
 
 // ── Small reusable bits ───────────────────────────────────────────────────────
 
-const SKILL_BAR = ['', 'bg-sky-600', 'bg-sky-500', 'bg-amber-500', 'bg-indigo-500', 'bg-green-500'];
+// level 1 → 5; deep shades so white text stays readable (≥ 4.5:1) in both themes
+const SKILL_BAR = ['', 'bg-cyan-800', 'bg-sky-700', 'bg-amber-700', 'bg-indigo-600', 'bg-green-700'];
 
 function SkillPill({ skill, level }) {
   return (
@@ -646,34 +648,38 @@ export default function ProjectPage() {
   return (
     <div className="min-h-screen bg-slate-900 text-slate-100">
       {/* Navbar */}
-      <header className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900/95 backdrop-blur px-6 py-3 flex items-center gap-4">
-        <button onClick={() => navigate('/dashboard')} className="text-slate-400 hover:text-white transition">
+      <header className="sticky top-0 z-30 border-b border-slate-700 bg-slate-900/95 backdrop-blur px-4 sm:px-6 py-3 flex items-center gap-3 sm:gap-4">
+        <button onClick={() => navigate('/dashboard')} aria-label="Back to projects" className="text-slate-400 hover:text-white transition">
           <ArrowLeft className="h-5 w-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <BarChart2 className="h-5 w-5 text-indigo-400" />
+        <div className="flex min-w-0 items-center gap-2">
+          <BarChart2 className="h-5 w-5 shrink-0 text-indigo-400" />
           <span className="font-semibold text-white truncate">{project?.title}</span>
         </div>
+        <ThemeToggle compact className="ml-auto" />
         {isAdmin && (
           <button
             id="delete-project-btn"
+            aria-label="Delete project"
             onClick={() => { if (window.confirm('Delete this project?')) deleteMut.mutate(); }}
-            className="ml-auto flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-400/50 px-3 py-1.5 rounded-lg transition"
+            className="flex items-center gap-1.5 text-sm text-red-400 hover:text-red-300 border border-red-500/30 hover:border-red-400/50 px-3 py-1.5 rounded-lg transition"
           >
             <Trash2 className="h-4 w-4" />
-            Delete project
+            <span className="hidden sm:inline">Delete project</span>
           </button>
         )}
       </header>
 
       {/* Tabs */}
-      <div className="border-b border-slate-700 px-6">
-        <nav className="flex gap-1">
+      <div className="border-b border-slate-700 px-2 sm:px-6">
+        {/* scrolls sideways on narrow screens instead of widening the page */}
+        <nav className="flex gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none]" aria-label="Project sections">
           {TABS.map((t) => (
             <button
               key={t}
               onClick={() => setTab(t)}
-              className={`px-4 py-3 text-sm font-medium border-b-2 transition ${
+              aria-current={tab === t ? 'page' : undefined}
+              className={`shrink-0 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 transition ${
                 tab === t
                   ? 'border-indigo-500 text-white'
                   : 'border-transparent text-slate-400 hover:text-slate-300'
@@ -689,12 +695,16 @@ export default function ProjectPage() {
       </div>
 
       {/* Content */}
-      <main className={`mx-auto px-6 py-6 ${['Board', 'Analytics', 'Graph', 'Report'].includes(tab) ? 'max-w-7xl' : 'max-w-4xl'}`}>
+      <main className={`mx-auto px-4 sm:px-6 py-6 ${['Board', 'Analytics', 'Graph', 'Report'].includes(tab) ? 'max-w-7xl' : 'max-w-4xl'}`}>
         {tab === 'Overview' && project && <OverviewTab project={project} />}
         {tab === 'Board' && (
           <KanbanBoard tasks={tasks} projectId={projectId} />
         )}
-        <Suspense fallback={<div className="flex justify-center py-16"><Loader2 className="h-6 w-6 animate-spin text-indigo-400" /></div>}>
+        <Suspense fallback={(
+          <div role="status" className="flex items-center justify-center gap-2 py-16 text-sm text-slate-400">
+            <Loader2 className="h-5 w-5 animate-spin text-indigo-400" aria-hidden="true" />Loading…
+          </div>
+        )}>
         {tab === 'Plan' && (
           <PlanTab projectId={projectId} isAdmin={isAdmin} />
         )}

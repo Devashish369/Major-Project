@@ -21,7 +21,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.deps import get_current_user, require_admin
 from app.ratelimit import limit
-from app.models import ActivityLog, Project, ProjectMember, Sprint, Task, TaskDependency
+from app.models import Project, Sprint, Task, TaskDependency
 from app.schemas import GeneratePlanRequest, ApplyPlanRequest, EstimateRequest
 from pydantic import ValidationError
 

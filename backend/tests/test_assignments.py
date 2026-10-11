@@ -22,7 +22,7 @@ from app.services.assignment import (
     MemberInfo, TaskInfo, recommend_assignments,
     _skill_match, _availability, _score,
 )
-from app.services.workload import compute_workload, WorkloadEntry
+from app.services.workload import compute_workload
 
 
 # ── Client + helpers ──────────────────────────────────────────────────────────

@@ -21,7 +21,6 @@ Integration tests (HTTP, uses TestClient + in-memory DB):
   ✓ Non-member gets 404
 """
 
-import math
 import numpy as np
 from datetime import date, timedelta
 
@@ -346,7 +345,6 @@ class TestHealthUnit:
 
     def test_level_medium_at_60(self):
         yesterday = (date.today() - timedelta(days=1)).isoformat()
-        tasks = [self._task(tid=i, due=yesterday) for i in range(2)]
         all5  = [self._task(tid=i, due=yesterday if i < 2 else None) for i in range(5)]
         r = compute_health(
             start_date=None, due_date=None,

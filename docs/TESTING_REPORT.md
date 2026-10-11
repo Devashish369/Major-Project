@@ -119,6 +119,16 @@ Run in-process against the real local database; the LLM is either the real Groq 
 | Tokens | JWT with `exp`, 12 h lifetime |
 | Endpoint sweep as demo user (33 calls, all API groups) | all 2xx with the standard envelope, no tracebacks |
 
+### Theme, layout and code checks (2026-10-12)
+
+| Check | Result |
+|---|---|
+| `theme_check.py`: Auto follows the device (also live), Light/Dark override it, survive a reload, set before first paint, other tabs follow, accessible radio group | 8/8 |
+| Text contrast scan of login, dashboard, Board, Team, Analytics, Decisions, Overview, Security (WCAG AA 4.5:1, large text 3:1) | 0 failures in light and in dark (about 110 found and fixed, mostly dark-theme grey text at 3.07:1 and white on amber/green skill pills at 2.2:1) |
+| Phone width (390 px): dashboard and project page | no sideways scrolling (was 709 px and 731 px wide) |
+| All browser checks on the production build under the real CSP | drag 5/5, lifecycle 13/13, register 8/8, accounts 13/13, team journey 6/6, features 18/18, sort 7/7, theme 10/10, CSP pass, every tab 0 problems |
+| `ruff` (pyflakes rules) on backend, ML, tests and scripts | 32 unused imports / variables removed; 0 left. `oxlint` on the frontend: 0 warnings |
+
 ### Dependency and secret scans (2026-10-11)
 
 | Scan | Result |
